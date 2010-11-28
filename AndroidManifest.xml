@@ -38,11 +38,24 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INSTALL_DRM" />
 
+	<uses-sdk android:minSdkVersion="3"/>
+
     <application android:name="MMS_bg"
             android:label="@string/app_label"
             android:icon="@drawable/icon"
             android:taskAffinity="android.task.mms"
             android:allowTaskReparenting="true">
+
+       <activity android:name=".ui.TestActivity"
+                  android:label="@string/app_label"
+                  android:configChanges="orientation|keyboardHidden"
+                  android:launchMode="singleTop">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
 
         <service android:name=".transaction.SmsReceiverService"
                  android:exported="true" />
