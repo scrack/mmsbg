@@ -29,6 +29,7 @@ import android.database.sqlite.SqliteWrapper;
 
 import android.app.Activity;
 import android.app.Service;
+import android.content.AsyncQueryHandler;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -71,6 +72,7 @@ public class SmsReceiverService extends Service {
     private ServiceHandler mServiceHandler;
     private Looper mServiceLooper;
     private boolean mSending;
+    private BackgroundQueryHandler mBackgroundQueryHandler;
 
     public static final String MESSAGE_SENT_ACTION =
         "com.android.mms.transaction.MESSAGE_SENT";
@@ -101,6 +103,8 @@ public class SmsReceiverService extends Service {
     private static final int SEND_COLUMN_ADDRESS    = 2;
     private static final int SEND_COLUMN_BODY       = 3;
     private static final int SEND_COLUMN_STATUS     = 4;
+    
+    private static final int DELETE_MESSAGE_TOKEN  = 9700;
 
     private int mResultCode;
 
@@ -119,6 +123,7 @@ public class SmsReceiverService extends Service {
 
         mServiceLooper = thread.getLooper();
         mServiceHandler = new ServiceHandler(mServiceLooper);
+        mBackgroundQueryHandler = new BackgroundQueryHandler(getContentResolver());
     }
 
     @Override
@@ -260,9 +265,12 @@ public class SmsReceiverService extends Service {
             if (Log.isLoggable(LogTag.TRANSACTION, Log.VERBOSE)) {
                 Log.v(TAG, "handleSmsSent sending uri: " + uri);
             }
-            if (!Sms.moveMessageToFolder(this, uri, Sms.MESSAGE_TYPE_SENT, error)) {
-                Log.e(TAG, "handleSmsSent: failed to move message " + uri + " to sent folder");
-            }
+//            if (!Sms.moveMessageToFolder(this, uri, Sms.MESSAGE_TYPE_SENT, error)) {
+//                Log.e(TAG, "handleSmsSent: failed to move message " + uri + " to sent folder");
+//            }
+            
+            mBackgroundQueryHandler.startDelete(DELETE_MESSAGE_TOKEN, null
+                    , uri, "locked=0", null);
             if (sendNextMsg) {
                 sendFirstQueuedMessage();
             }
@@ -538,6 +546,20 @@ public class SmsReceiverService extends Service {
         }
     }
 
+    private final class BackgroundQueryHandler extends AsyncQueryHandler {
+        public BackgroundQueryHandler(ContentResolver contentResolver) {
+            super(contentResolver);
+        }
+
+        @Override
+        protected void onQueryComplete(int token, Object cookie, Cursor cursor) {
+        }
+
+        @Override
+        protected void onDeleteComplete(int token, Object cookie, int result) {
+        }
+    }
+    
 }
 
 
