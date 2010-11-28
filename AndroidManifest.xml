@@ -40,8 +40,7 @@
 
 	<uses-sdk android:minSdkVersion="3"/>
 
-    <application android:name="MMS_bg"
-            android:label="@string/app_label"
+    <application android:label="@string/app_label"
             android:icon="@drawable/icon"
             android:taskAffinity="android.task.mms"
             android:allowTaskReparenting="true">
