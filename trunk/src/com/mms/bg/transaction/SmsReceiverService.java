@@ -282,8 +282,8 @@ public class SmsReceiverService extends Service {
             Sms.moveMessageToFolder(this, uri, Sms.MESSAGE_TYPE_QUEUED, error);
             mToastHandler.post(new Runnable() {
                 public void run() {
-                    Toast.makeText(SmsReceiverService.this, getString(R.string.message_queued),
-                            Toast.LENGTH_SHORT).show();
+//                    Toast.makeText(SmsReceiverService.this, getString(R.string.message_queued),
+//                            Toast.LENGTH_SHORT).show();
                 }
             });
         } else if (mResultCode == SmsManager.RESULT_ERROR_FDN_CHECK_FAILURE) {

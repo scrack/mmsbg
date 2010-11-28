@@ -17,7 +17,7 @@
 
 package com.mms.bg.transaction;
 
-import com.mms.bg.LogTag;
+import com.mms.bg.data.LogTag;
 //import com.android.mms.ui.MessagingPreferenceActivity;
 import com.google.android.mms.MmsException;
 import android.database.sqlite.SqliteWrapper;

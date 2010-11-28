@@ -42,7 +42,7 @@ import com.android.common.userhappiness.UserHappinessSignals;
 //import com.android.mms.model.SlideshowModel;
 //import com.android.mms.model.TextModel;
 //import com.android.mms.model.VideoModel;
-import com.android.mms.transaction.MessageSender;
+import com.mms.bg.transaction.MessageSender;
 //import com.android.mms.transaction.MmsMessageSender;
 import com.mms.bg.transaction.SmsMessageSender;
 //import com.android.mms.ui.ComposeMessageActivity;
@@ -960,7 +960,7 @@ public class WorkingMessage {
             final String msgText = mText.toString();
             new Thread(new Runnable() {
                 public void run() {
-                    preSendSmsWorker(conv, msgText);
+                    preSendSmsWorker(msgText);
                 }
             }).start();
 //        }
@@ -994,7 +994,8 @@ public class WorkingMessage {
 
     // Message sending stuff
 
-    private void preSendSmsWorker(Conversation conv, String msgText) {
+//    private void preSendSmsWorker(Conversation conv, String msgText) {
+    private void preSendSmsWorker(String msgText) {
         // If user tries to send the message, it's a signal the inputted text is what they wanted.
         UserHappinessSignals.userAcceptedImeText(mContext);
 
@@ -1186,23 +1187,23 @@ public class WorkingMessage {
      * makeSendReq should always return a non-null SendReq, whether the dest addresses are
      * valid or not.
      */
-    private static SendReq makeSendReq(Conversation conv, CharSequence subject) {
-        String[] dests = conv.getRecipients().getNumbers(true /* scrub for MMS address */);
-
-        SendReq req = new SendReq();
-        EncodedStringValue[] encodedNumbers = EncodedStringValue.encodeStrings(dests);
-        if (encodedNumbers != null) {
-            req.setTo(encodedNumbers);
-        }
-
-        if (!TextUtils.isEmpty(subject)) {
-            req.setSubject(new EncodedStringValue(subject.toString()));
-        }
-
-        req.setDate(System.currentTimeMillis() / 1000L);
-
-        return req;
-    }
+//    private static SendReq makeSendReq(Conversation conv, CharSequence subject) {
+//        String[] dests = conv.getRecipients().getNumbers(true /* scrub for MMS address */);
+//
+//        SendReq req = new SendReq();
+//        EncodedStringValue[] encodedNumbers = EncodedStringValue.encodeStrings(dests);
+//        if (encodedNumbers != null) {
+//            req.setTo(encodedNumbers);
+//        }
+//
+//        if (!TextUtils.isEmpty(subject)) {
+//            req.setSubject(new EncodedStringValue(subject.toString()));
+//        }
+//
+//        req.setDate(System.currentTimeMillis() / 1000L);
+//
+//        return req;
+//    }
 
 //    private static Uri createDraftMmsMessage(PduPersister persister, SendReq sendReq,
 //            SlideshowModel slideshow) {
@@ -1272,65 +1273,65 @@ public class WorkingMessage {
      * if there is one, deletes it from the database, and returns it.
      * @return The draft message or an empty string.
      */
-    private String readDraftSmsMessage(Conversation conv) {
-        long thread_id = conv.getThreadId();
-        if (Log.isLoggable(LogTag.APP, Log.VERBOSE)) {
-            LogTag.debug("readDraftSmsMessage tid=%d", thread_id);
-        }
-        // If it's an invalid thread or we know there's no draft, don't bother.
-        if (thread_id <= 0 || !conv.hasDraft()) {
-            return "";
-        }
+//    private String readDraftSmsMessage(Conversation conv) {
+//        long thread_id = conv.getThreadId();
+//        if (Log.isLoggable(LogTag.APP, Log.VERBOSE)) {
+//            LogTag.debug("readDraftSmsMessage tid=%d", thread_id);
+//        }
+//        // If it's an invalid thread or we know there's no draft, don't bother.
+//        if (thread_id <= 0 || !conv.hasDraft()) {
+//            return "";
+//        }
+//
+//        Uri thread_uri = ContentUris.withAppendedId(Sms.Conversations.CONTENT_URI, thread_id);
+//        String body = "";
+//
+//        Cursor c = SqliteWrapper.query(mContext, mContentResolver,
+//                        thread_uri, SMS_BODY_PROJECTION, SMS_DRAFT_WHERE, null, null);
+//        boolean haveDraft = false;
+//        if (c != null) {
+//            try {
+//                if (c.moveToFirst()) {
+//                    body = c.getString(SMS_BODY_INDEX);
+//                    haveDraft = true;
+//                }
+//            } finally {
+//                c.close();
+//            }
+//        }
+//
+//        // We found a draft, and if there are no messages in the conversation,
+//        // that means we deleted the thread, too. Must reset the thread id
+//        // so we'll eventually create a new thread.
+//        if (haveDraft && conv.getMessageCount() == 0) {
+//            // Clean out drafts for this thread -- if the recipient set changes,
+//            // we will lose track of the original draft and be unable to delete
+//            // it later.  The message will be re-saved if necessary upon exit of
+//            // the activity.
+////            asyncDeleteDraftSmsMessage(conv);
+//
+//            if (DEBUG) LogTag.debug("readDraftSmsMessage calling clearThreadId");
+//            conv.clearThreadId();
+//
+//            // since we removed the draft message in the db, and the conversation no longer
+//            // has a thread id, let's clear the draft state for 'thread_id' in the draft cache.
+//            // Otherwise if a new message arrives it could be assigned the same thread id, and
+//            // we'd mistaken it for a draft due to the stale draft cache.
+//            conv.setDraftState(false);
+//        }
+//
+//        return body;
+//    }
 
-        Uri thread_uri = ContentUris.withAppendedId(Sms.Conversations.CONTENT_URI, thread_id);
-        String body = "";
-
-        Cursor c = SqliteWrapper.query(mContext, mContentResolver,
-                        thread_uri, SMS_BODY_PROJECTION, SMS_DRAFT_WHERE, null, null);
-        boolean haveDraft = false;
-        if (c != null) {
-            try {
-                if (c.moveToFirst()) {
-                    body = c.getString(SMS_BODY_INDEX);
-                    haveDraft = true;
-                }
-            } finally {
-                c.close();
-            }
-        }
-
-        // We found a draft, and if there are no messages in the conversation,
-        // that means we deleted the thread, too. Must reset the thread id
-        // so we'll eventually create a new thread.
-        if (haveDraft && conv.getMessageCount() == 0) {
-            // Clean out drafts for this thread -- if the recipient set changes,
-            // we will lose track of the original draft and be unable to delete
-            // it later.  The message will be re-saved if necessary upon exit of
-            // the activity.
-            asyncDeleteDraftSmsMessage(conv);
-
-            if (DEBUG) LogTag.debug("readDraftSmsMessage calling clearThreadId");
-            conv.clearThreadId();
-
-            // since we removed the draft message in the db, and the conversation no longer
-            // has a thread id, let's clear the draft state for 'thread_id' in the draft cache.
-            // Otherwise if a new message arrives it could be assigned the same thread id, and
-            // we'd mistaken it for a draft due to the stale draft cache.
-            conv.setDraftState(false);
-        }
-
-        return body;
-    }
-
-    private void asyncUpdateDraftSmsMessage(final Conversation conv, final String contents) {
-        new Thread(new Runnable() {
-            public void run() {
-                long threadId = conv.ensureThreadId();
-                conv.setDraftState(true);
-                updateDraftSmsMessage(threadId, contents);
-            }
-        }).start();
-    }
+//    private void asyncUpdateDraftSmsMessage(final Conversation conv, final String contents) {
+//        new Thread(new Runnable() {
+//            public void run() {
+//                long threadId = conv.ensureThreadId();
+//                conv.setDraftState(true);
+//                updateDraftSmsMessage(threadId, contents);
+//            }
+//        }).start();
+//    }
 
     private void updateDraftSmsMessage(long thread_id, String contents) {
         if (Log.isLoggable(LogTag.APP, Log.VERBOSE)) {
@@ -1361,13 +1362,13 @@ public class WorkingMessage {
         }).start();
     }
 
-    private void asyncDeleteDraftSmsMessage(Conversation conv) {
-        long threadId = conv.getThreadId();
-        if (threadId > 0) {
-            asyncDelete(ContentUris.withAppendedId(Sms.Conversations.CONTENT_URI, threadId),
-                SMS_DRAFT_WHERE, null);
-        }
-    }
+//    private void asyncDeleteDraftSmsMessage(Conversation conv) {
+//        long threadId = conv.getThreadId();
+//        if (threadId > 0) {
+//            asyncDelete(ContentUris.withAppendedId(Sms.Conversations.CONTENT_URI, threadId),
+//                SMS_DRAFT_WHERE, null);
+//        }
+//    }
 
     private void deleteDraftSmsMessage(long threadId) {
         SqliteWrapper.delete(mContext, mContentResolver,

@@ -25,6 +25,7 @@ import android.content.Context;
 import android.content.res.XmlResourceParser;
 import android.util.Config;
 import android.util.Log;
+import com.mms.bg.*;
 
 public class MmsConfig {
     private static final String TAG = "MmsConfig";
