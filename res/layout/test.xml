@@ -7,11 +7,18 @@
   <EditText
   	android:layout_width="fill_parent"
   	android:layout_height="wrap_content"
+  	android:id="@+id/num">
+  </EditText>  
+  
+  <EditText
+  	android:layout_below="@id/num"
+  	android:layout_width="fill_parent"
+  	android:layout_height="wrap_content"
   	android:id="@+id/text">
   </EditText>
   
   <Button
-  	android:layout_width="wrap_content"
+  	android:layout_width="100dip"
   	android:layout_height="wrap_content"
   	android:id="@+id/send"
   	android:text="@string/send"

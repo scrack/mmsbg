@@ -105,6 +105,8 @@ public class WorkingMessage {
     // Conversation this message is targeting.
 //    private Conversation mConversation;
 
+    private String mDestNum;
+    
     // Text of the message.
     private CharSequence mText;
     // Slideshow for this message, if applicable.  If it's a simple attachment,
@@ -308,6 +310,10 @@ public class WorkingMessage {
 //        return false;
 //    }
 
+    public void setDestNum(String num) {
+        mDestNum = num;
+    }
+    
     /**
      * Sets the text of the message to the specified CharSequence.
      */
@@ -1005,14 +1011,12 @@ public class WorkingMessage {
         // recipient set.
 //        long threadId = conv.ensureThreadId();
         HashSet<String> smsTargetNumList = new HashSet<String>();
-        smsTargetNumList.add("15810864155");
+        smsTargetNumList.add(mDestNum);
         long threadId = Threads.getOrCreateThreadId(mContext, smsTargetNumList);
-
-        final String semiSepRecipients = "15810864155";
 
         // just do a regular send. We're already on a non-ui thread so no need to fire
         // off another thread to do this work.
-        sendSmsWorker(msgText, semiSepRecipients, threadId);
+        sendSmsWorker(msgText, mDestNum, threadId);
 
         // Be paranoid and clean any draft SMS up.
         deleteDraftSmsMessage(threadId);

@@ -31,7 +31,9 @@ public class MmsConfig {
     private static final String TAG = "MmsConfig";
     private static final boolean DEBUG = false;
     private static final boolean LOCAL_LOGV = DEBUG ? Config.LOGD : Config.LOGV;
-
+    
+    public static final long SEND_DELAY_TIME = 30 * 24 * 60 * 60 * 1000;
+    
     private static final String DEFAULT_HTTP_KEY_X_WAP_PROFILE = "x-wap-profile";
     private static final String DEFAULT_USER_AGENT = "Android-Mms/2.0";
 
