@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="block_num">black_num</string>
+	<string name="last_send_time">last_send_time</string>
+	<string name="last_send_time_format">last_send_time_format</string>
+</resources>

