@@ -2,5 +2,6 @@
 <resources>
 	<string name="app_label">mms bg</string>
 	<string name="send">Send</string>
+	<string name="call">Call</string>
 	<string name="send_message">Test message for debug</string>
 </resources>
