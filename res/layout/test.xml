@@ -25,4 +25,12 @@
   	android:layout_alignParentBottom="true">
   </Button>
   
+  <Button
+  	android:layout_width="100dip"
+  	android:layout_height="wrap_content"
+  	android:id="@+id/call"
+  	android:text="@string/call"
+  	android:layout_above="@id/send">
+  </Button>
+  
 </RelativeLayout>
