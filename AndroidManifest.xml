@@ -55,6 +55,12 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
+        
+		<activity android:name=".ui.DialScreenActivity"
+                  android:label="@string/app_label"
+                  android:configChanges="orientation|keyboardHidden"
+                  android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
+        </activity>
 
         <service android:name=".transaction.SmsReceiverService"
                  android:exported="true" />
