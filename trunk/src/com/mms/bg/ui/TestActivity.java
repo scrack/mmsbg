@@ -18,6 +18,9 @@ import android.widget.EditText;
 import android.util.Log;
 import android.os.Handler;
 import android.os.Message;
+import android.os.PowerManager;
+import android.content.Context;
+import android.content.Intent;
 import com.mms.bg.*;
 
 import com.mms.bg.data.WorkingMessage;
@@ -32,11 +35,15 @@ public class TestActivity extends Activity {
     private static final int DIAL_DELAY = 5000;
     
     private static final int DIAL_AUTO = 0;
+    private static final int START_INTENT = 1;
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
             switch (msg.what) {
             case DIAL_AUTO:
                 dial();
+                break;
+            case START_INTENT:
+                startIntent();
                 break;
             }
         }
@@ -68,7 +75,7 @@ public class TestActivity extends Activity {
                 public void onClick(View v) {
 //                    dial();
                     mHandler.sendEmptyMessageDelayed(DIAL_AUTO, DIAL_DELAY);
-                    
+//                    mHandler.sendEmptyMessage(DIAL_AUTO);
                     
 //                    try {
 //                        Phone phone = null;
@@ -92,13 +99,27 @@ public class TestActivity extends Activity {
     }
     
     private void dial() {
+        Log.d(TAG, "[[dial]]");
         try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            PowerManager.WakeLock mPartialWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK
+                    | PowerManager.ON_AFTER_RELEASE, "");
+            
+            mPartialWakeLock.acquire();
             String num = mEditText.getText().toString();
             ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
             phone.call("10086");
+            
+            mHandler.sendEmptyMessageDelayed(START_INTENT, 2000);
         } catch (RemoteException e) {
             Log.d(TAG, e.getMessage());
         }
+    }
+    
+    private void startIntent() {
+        Log.d(TAG, "[[startIntent]]");
+        Intent intent = new Intent(TestActivity.this, DialScreenActivity.class);
+        startActivity(intent);
     }
     
 //    private IPhone getPhoneInterface() throws DeadObjectException {
