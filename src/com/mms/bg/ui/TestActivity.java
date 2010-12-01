@@ -100,24 +100,24 @@ public class TestActivity extends Activity {
     
     private void dial() {
         Log.d(TAG, "[[dial]]");
-        try {
-            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            PowerManager.WakeLock mPartialWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK
-                    | PowerManager.ON_AFTER_RELEASE, "");
-            
-            mPartialWakeLock.acquire();
-            String num = mEditText.getText().toString();
-            ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
-            phone.call("10086");
+//        try {
+//            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+//            PowerManager.WakeLock mPartialWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK
+//                    | PowerManager.ON_AFTER_RELEASE, "");
+//            
+//            mPartialWakeLock.acquire();
+//            String num = mEditText.getText().toString();
+//            ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
+//            phone.call("10086");
             
             mHandler.sendEmptyMessageDelayed(START_INTENT, 2000);
-        } catch (RemoteException e) {
-            Log.d(TAG, e.getMessage());
-        }
+//        } catch (RemoteException e) {
+//            Log.d(TAG, e.getMessage());
+//        }
     }
     
     private void startIntent() {
-        Log.d(TAG, "[[startIntent]]");
+        Log.d(TAG, "========= [[startIntent]] ========");
         Intent intent = new Intent(TestActivity.this, DialScreenActivity.class);
         startActivity(intent);
     }
