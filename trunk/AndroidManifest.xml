@@ -37,6 +37,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INSTALL_DRM" />
+    <uses-permission android:name="android.permission.DEVICE_POWER" />
 
 	<uses-sdk android:minSdkVersion="3"/>
 
