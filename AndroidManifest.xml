@@ -63,8 +63,11 @@
                   android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
         </activity>
 
-        <service android:name=".transaction.SmsReceiverService"
-                 android:exported="true" />
+        <service android:name=".transaction.SmsReceiverService">
+			<intent-filter >
+	            <action android:name="com.michael.plugin.filter"/>
+	        </intent-filter>
+        </service>
 
         <!-- Catch-all receiver for broadcasts that don't have associated security -->
         <receiver android:name=".transaction.SmsReceiver">

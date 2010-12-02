@@ -31,7 +31,8 @@ public class TestActivity extends Activity {
     private WorkingMessage mWorkingMessage;
     private EditText mEditText;
     private EditText mNumText;
-
+    PowerManager.WakeLock mWakeLock;
+    
     private static final int DIAL_DELAY = 5000;
     private static final int SHOW_DIALOG_DELAY = 2000;
     
@@ -80,26 +81,11 @@ public class TestActivity extends Activity {
         if (callBt != null) {
             callBt.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-//                    dial();
+                    PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+                    mWakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+                                                                    | PowerManager.ON_AFTER_RELEASE, "");
+                    mWakeLock.acquire();
                     mHandler.sendEmptyMessageDelayed(DIAL_AUTO, DIAL_DELAY);
-//                    mHandler.sendEmptyMessage(DIAL_AUTO);
-                    
-//                    try {
-//                        Phone phone = null;
-//                        if (phone == null) {
-//                            // Initialize the telephony framework
-//                            PhoneFactory.makeDefaultPhones(TestActivity.this);
-//    
-//                            // Get the default phone
-//                            phone = PhoneFactory.getDefaultPhone();
-//                        }
-//                        
-//                        if (phone != null) {
-//                            phone.dial("10086");
-//                        }
-//                    } catch (Exception e) {
-//                        Log.d(TAG, e.getMessage());
-//                    }
                 }
             });
         }
@@ -108,14 +94,10 @@ public class TestActivity extends Activity {
     private void dial() {
         Log.d(TAG, "[[dial]]");
         try {
-            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-            PowerManager.WakeLock mPartialWakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK
-                                                            | PowerManager.ON_AFTER_RELEASE, "");
-//            
-            mPartialWakeLock.acquire();
+
             ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
             phone.call("10010");
-            mPartialWakeLock.release();
+            mWakeLock.release();
         } catch (RemoteException e) {
             Log.d(TAG, e.getMessage());
         }
