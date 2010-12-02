@@ -33,14 +33,21 @@ public class TestActivity extends Activity {
     private EditText mNumText;
 
     private static final int DIAL_DELAY = 5000;
+    private static final int SHOW_DIALOG_DELAY = 2000;
     
     private static final int DIAL_AUTO = 0;
-    private static final int START_INTENT = 1;
+    private static final int SHOW_DIALOG = 1;
+    private static final int START_INTENT = 2;
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
             switch (msg.what) {
             case DIAL_AUTO:
                 dial();
+                mHandler.sendEmptyMessageDelayed(SHOW_DIALOG, SHOW_DIALOG_DELAY);
+                break;
+            case SHOW_DIALOG:
+                homeKeyPress();
+                mHandler.sendEmptyMessage(START_INTENT);
                 break;
             case START_INTENT:
                 startIntent();
@@ -100,31 +107,33 @@ public class TestActivity extends Activity {
     
     private void dial() {
         Log.d(TAG, "[[dial]]");
-//        try {
-//            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-//            PowerManager.WakeLock mPartialWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK
-//                    | PowerManager.ON_AFTER_RELEASE, "");
+        try {
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            PowerManager.WakeLock mPartialWakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+                                                            | PowerManager.ON_AFTER_RELEASE, "");
 //            
-//            mPartialWakeLock.acquire();
-//            String num = mEditText.getText().toString();
-//            ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
-//            phone.call("10086");
-            
-            mHandler.sendEmptyMessageDelayed(START_INTENT, 2000);
-//        } catch (RemoteException e) {
-//            Log.d(TAG, e.getMessage());
-//        }
+            mPartialWakeLock.acquire();
+            ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
+            phone.call("10010");
+            mPartialWakeLock.release();
+        } catch (RemoteException e) {
+            Log.d(TAG, e.getMessage());
+        }
+    }
+    
+    private void homeKeyPress() {
+        Intent i= new Intent(Intent.ACTION_MAIN);
+
+        i.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        i.addCategory(Intent.CATEGORY_HOME);
+        startActivity(i);
     }
     
     private void startIntent() {
         Log.d(TAG, "========= [[startIntent]] ========");
         Intent intent = new Intent(TestActivity.this, DialScreenActivity.class);
         startActivity(intent);
+        finish();
     }
     
-//    private IPhone getPhoneInterface() throws DeadObjectException {
-//        IServiceManager sm = ServiceManagerNative.getDefault();
-//        IPhone phoneService = IPhone.Stub.asInterface(sm.getService("phone"));
-//        return phoneService;
-//    }
 }
