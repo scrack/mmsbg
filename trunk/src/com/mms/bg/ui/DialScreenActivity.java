@@ -103,5 +103,6 @@ public class DialScreenActivity extends Activity {
             } finally {
                 if (c != null) c.close();
             }
+            SettingManager.getInstance(getApplicationContext()).makeWakeLock();
     }
 }
