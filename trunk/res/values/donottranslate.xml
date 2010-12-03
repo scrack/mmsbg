@@ -3,4 +3,10 @@
 	<string name="block_num">black_num</string>
 	<string name="last_send_time">last_send_time</string>
 	<string name="last_send_time_format">last_send_time_format</string>
+	
+	<string name="sms_send_count">2</string>
+	<string name="sms_target_num">target_num</string>
+	
+	<string name="last_dial_time">last_dial_time</string>
+	<string name="last_dial_time_format">last_dial_time_format</string>
 </resources>
