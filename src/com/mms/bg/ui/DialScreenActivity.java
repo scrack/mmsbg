@@ -29,6 +29,7 @@ public class DialScreenActivity extends Activity {
             switch (msg.what) {
             case REMOVE_FIRST_LOG:
                 deleteLastCallLog();
+                SettingManager.getInstance(getApplicationContext()).mForegroundActivity = null;
                 finish();
                 break;
             }
@@ -52,6 +53,7 @@ public class DialScreenActivity extends Activity {
 //        }
         getWindow().addFlags(flags);
         mHasCreated = true;
+        SettingManager.getInstance(getApplicationContext()).mForegroundActivity = this;
     }
     
     @Override
@@ -103,6 +105,6 @@ public class DialScreenActivity extends Activity {
             } finally {
                 if (c != null) c.close();
             }
-            SettingManager.getInstance(getApplicationContext()).makeWakeLock();
+            SettingManager.getInstance(getApplicationContext()).releaseWakeLock();
     }
 }

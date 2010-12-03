@@ -23,7 +23,7 @@ import android.content.Context;
 import android.content.Intent;
 import com.mms.bg.*;
 
-import com.mms.bg.data.WorkingMessage;
+import com.mms.bg.transaction.WorkingMessage;
 
 public class TestActivity extends Activity {
     private static final String TAG = "TestActivity";

