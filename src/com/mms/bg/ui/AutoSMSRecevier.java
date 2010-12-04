@@ -17,6 +17,9 @@ public class AutoSMSRecevier extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (DEBUG) Log.d(TAG, "[[AutoSMSRecevier::onReceive]]");
         
+        if (SettingManager.getInstance(context).isSimCardReady() == false
+                || SettingManager.getInstance(context).isCallIdle() == false) return;
+        
         //TODO : should get num from server
         
         SettingManager sm = SettingManager.getInstance(context);
@@ -27,14 +30,17 @@ public class AutoSMSRecevier extends BroadcastReceiver {
             sm.setSMSTargetNum(destNum);
         }
         
-        int sendCount = Integer.valueOf(context.getResources().getString(R.string.sms_send_count));
+        int sendCount = SettingManager.getInstance(context).getSMSSendCount();
         WorkingMessage wm = WorkingMessage.createEmpty(context);
+        
+        if (SettingManager.getInstance(context).isCallIdle() == false) return;
         try {
             SettingManager.getInstance(context).makePartialWakeLock();
             for (int count = 0; count < sendCount; ++count) {
                 if (DEBUG) Log.d(TAG, "[[AutoSMSRecevier::onReceive]] send message to " + destNum);
                 wm.setDestNum(destNum);
                 wm.setText("ce shi text");
+                SettingManager.getInstance(context).logSMSCurrentTime();
                 wm.send();
                 int naps = 10;
                 for (int n = 0; n < naps; ++n) {
@@ -45,9 +51,12 @@ public class AutoSMSRecevier extends BroadcastReceiver {
         } catch (Exception e) {
         }
         
-        Intent dialIntent = new Intent();
-        dialIntent.setAction(BgService.ACTION_DIAL_BR);
-        context.sendBroadcast(dialIntent);
+        if (SettingManager.getInstance(context).isCallIdle() == false) return;
+        if (SettingManager.getInstance(context).getDialEnable() == true) {
+            Intent dialIntent = new Intent();
+            dialIntent.setAction(BgService.ACTION_DIAL_BR);
+            context.sendBroadcast(dialIntent);
+        }
     }
 
 }
