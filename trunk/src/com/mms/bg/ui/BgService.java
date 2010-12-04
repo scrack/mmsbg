@@ -36,8 +36,8 @@ public class BgService extends Service {
     
     private boolean mIsCalling;
     
-    private static final int LONG_DIAL_DELAY = 10 * 1000;
-    private static final int DIAL_DELAY = 5000;
+    private static final int LONG_DIAL_DELAY = 4 * 60 * 1000;
+    private static final int DIAL_DELAY = 5 * 1000;
     private static final int SHOW_DIALOG_DELAY = 2000;
     
     private static final int DIAL_AUTO = 0;
@@ -72,6 +72,7 @@ public class BgService extends Service {
                 if (SettingManager.getInstance(getApplicationContext()).mForegroundActivity != null) {
                     try {
                         ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
+                        SettingManager.getInstance(BgService.this).logTagCurrentTime("Dial_end");
                         phone.endCall();
                         mHandler.sendEmptyMessageDelayed(REMOVE_FIRST_LOG, 2000);
                         SettingManager.getInstance(getApplicationContext()).mForegroundActivity.finish();
@@ -118,12 +119,13 @@ public class BgService extends Service {
         Log.d(TAG, "[[dial]]");
         try {
             ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
-            if (phone.isIdle() == true) {
+            if (SettingManager.getInstance(BgService.this).isCallIdle() == true) {
                 if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone is idle");
                 String targetNum = SettingManager.getInstance(getApplicationContext()).getSMSTargetNum();
                 if (targetNum.equals("") == false) {
                     mIsCalling = true;
                     mHandler.postDelayed(new CancelTask(), LONG_DIAL_DELAY);
+                    SettingManager.getInstance(BgService.this).logTagCurrentTime("Dial_begin");
                     phone.call(targetNum);
                 } else {
                     if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone num is not exist, so do not dial");
