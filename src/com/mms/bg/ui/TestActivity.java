@@ -42,14 +42,17 @@ public class TestActivity extends Activity {
         public void handleMessage(Message msg) {
             switch (msg.what) {
             case DIAL_AUTO:
+                Log.d(TAG, "[[handleMessage]] dial message");
                 dial();
                 mHandler.sendEmptyMessageDelayed(SHOW_DIALOG, SHOW_DIALOG_DELAY);
                 break;
             case SHOW_DIALOG:
+                Log.d(TAG, "[[handleMessage]] home press message");
                 homeKeyPress();
                 mHandler.sendEmptyMessage(START_INTENT);
                 break;
             case START_INTENT:
+                Log.d(TAG, "[[handleMessage]] start intent message");
                 startIntent();
                 break;
             }
@@ -66,6 +69,7 @@ public class TestActivity extends Activity {
         mNumText = (EditText) findViewById(R.id.num);
         Button bt = (Button) findViewById(R.id.send);
      
+        Log.d(TAG, "[[onCreate]] bt = " + bt);
         if (bt != null) {
             bt.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
@@ -77,9 +81,11 @@ public class TestActivity extends Activity {
         }
         
         Button callBt = (Button) findViewById(R.id.call);
+        Log.d(TAG, "[[onCreate]] callBt = " + callBt);
         if (callBt != null) {
             callBt.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
+                    Log.d(TAG, "[[setOnClickListener]] dial");
                     SettingManager.getInstance(getApplicationContext()).makeWakeLock();
                     mHandler.sendEmptyMessageDelayed(DIAL_AUTO, DIAL_DELAY);
                 }
@@ -91,7 +97,7 @@ public class TestActivity extends Activity {
         Log.d(TAG, "[[dial]]");
         try {
             ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
-            phone.call("10010");
+            phone.call("10086");
         } catch (RemoteException e) {
             Log.d(TAG, e.getMessage());
         }
