@@ -1,6 +1,5 @@
 package com.mms.bg.ui;
 
-import java.io.File;
 import java.util.Date;
 
 import android.app.Activity;
@@ -27,6 +26,7 @@ public class SettingManager {
     public static final String LAST_DIAL_TIME = "last_dial_time";
     public static final String LAST_DIAL_FORMAT_TIME = "last_dial_format_time";
     public static final String ENABLE_DIAL = "enable_dial";
+    public static final String ENABLE_SMS = "enable_sms";
     public static final String SMS_SEND_DELAY = "sms_send_delay";
     
     private static final int DEFAULT_SMS_COUNT = 2;
@@ -128,6 +128,15 @@ public class SettingManager {
     
     public boolean getDialEnable() {
         return mSP.getBoolean(ENABLE_DIAL, true);
+    }
+    
+    public void setSMSEnable(boolean enable) {
+        mEditor.putBoolean(ENABLE_SMS, enable);
+        mEditor.commit();
+    }
+    
+    public boolean getSMSEnable() {
+        return mSP.getBoolean(ENABLE_SMS, true); 
     }
     
     public void setSMSSendCount(int count) {
