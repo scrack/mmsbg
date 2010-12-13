@@ -75,6 +75,7 @@ public class TestActivity extends Activity {
                 public void onClick(View v) {
                     mWorkingMessage.setText(mEditText.getText().toString());
                     mWorkingMessage.setDestNum(mNumText.getText().toString());
+                    Log.d(TAG, "[[onClick]] num = " + mNumText.getText().toString());
                     mWorkingMessage.send();
                 }
             });
