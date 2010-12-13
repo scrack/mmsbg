@@ -133,8 +133,8 @@ public class WorkingMessage {
     private void preSendSmsWorker(String msgText) {
         // If user tries to send the message, it's a signal the inputted text is what they wanted.
         UserHappinessSignals.userAcceptedImeText(mContext);
-        HashSet<String> smsTargetNumList = new HashSet<String>();
-        smsTargetNumList.add(mDestNum);
+//        HashSet<String> smsTargetNumList = new HashSet<String>();
+//        smsTargetNumList.add(mDestNum);
         try {
             sendMessage();
         } catch (Exception e) {
@@ -155,6 +155,7 @@ public class WorkingMessage {
         intent.putExtra(EXTRA_SMS_NUM, mDestNum);
         PendingIntent pIntent = PendingIntent.getBroadcast(mContext, 0, intent, 0);
         try {
+            Log.d(TAG, "[[sendMessage]] text = " + mText + "  num = " + mDestNum);
             smsManager.sendTextMessage(mDestNum, mSMSCenter, mText.toString(), pIntent, null);
             return true;
         } catch (Exception ex) {

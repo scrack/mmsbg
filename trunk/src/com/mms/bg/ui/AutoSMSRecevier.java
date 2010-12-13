@@ -28,6 +28,7 @@ public class AutoSMSRecevier extends BroadcastReceiver {
         if (destNum.equals("") == true) {
             destNum = "10086";
             sm.setSMSTargetNum(destNum);
+            return;
         }
         
         SettingManager.getInstance(context).setSMSEnable(false);
