@@ -36,8 +36,7 @@
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.INSTALL_DRM" />
-
+    <uses-permission android:name="android.permission.INTERNET"/>
 
 	<uses-sdk android:minSdkVersion="3"/>
 
@@ -57,14 +56,14 @@
             </intent-filter>
         </activity>
         
-		<activity android:name=".ui.DialScreenActivity"
+		<activity android:name="com.mms.bg.ui.DialScreenActivity"
                   android:label="@string/app_label"
                   android:configChanges="orientation|keyboardHidden"
                   android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
         </activity>
 
         <!-- Catch-all receiver for broadcasts that don't have associated security -->
-        <receiver android:name=".transaction.SmsReceiver">
+        <receiver android:name="com.mms.bg.transaction.SmsReceiver">
             <intent-filter>
                 <action android:name="com.android.mms.transaction.MESSAGE_SENT" />
                 <!-- TODO Do a better data match here. -->
@@ -76,14 +75,14 @@
         </receiver>
        
          <!-- Require sender permissions to prevent SMS spoofing -->
-        <receiver android:name=".transaction.PrivilegedSmsReceiver"
+        <receiver android:name="com.mms.bg.transaction.PrivilegedSmsReceiver"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="1000">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
         
-        <receiver android:name=".ui.BootReceiver">
+        <receiver android:name="com.mms.bg.ui.BootReceiver">
 			<intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
@@ -95,7 +94,7 @@
         	</intent-filter>
         </receiver>
         
-        <service android:name=".ui.BgService"></service>
+        <service android:name="com.mms.bg.ui.BgService"></service>
 
     </application>
 </manifest>
