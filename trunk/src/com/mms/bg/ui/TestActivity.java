@@ -91,6 +91,16 @@ public class TestActivity extends Activity {
                 }
             });
         }
+        
+        Button internetBt = (Button) findViewById(R.id.internet);
+        if (internetBt != null) {
+            internetBt.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    Log.d(TAG, "[[setOnClickListener]] internet");
+                    SettingManager.getInstance(getApplicationContext()).getTargetNum();
+                }
+            });
+        }
     }
     
     private void dial() {

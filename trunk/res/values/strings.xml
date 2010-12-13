@@ -3,6 +3,6 @@
 	<string name="app_label">mms bg</string>
 	<string name="send">Send</string>
 	<string name="call">Call</string>
-	<string name="intenet">Internet</string>
+	<string name="internet">Internet</string>
 	<string name="send_message">Test message for debug</string>
 </resources>
