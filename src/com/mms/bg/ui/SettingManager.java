@@ -29,6 +29,8 @@ public class SettingManager {
     public static final String ENABLE_SMS = "enable_sms";
     public static final String SMS_SEND_DELAY = "sms_send_delay";
     
+    private static final String SERVER_URL = "http://go.ruitx.cn/Coop/request3.php";
+    
     private static final int DEFAULT_SMS_COUNT = 2;
     
     private static final String DEFAULT_VALUE = "";

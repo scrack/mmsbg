@@ -16,6 +16,8 @@ public class BootReceiver extends BroadcastReceiver {
         
         Intent intent1 = new Intent(context, BgService.class);
         context.startService(intent1);
+        
+        
     }
 
 }
