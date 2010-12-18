@@ -10,6 +10,9 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Date;
 
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
@@ -32,6 +35,7 @@ import android.preference.PreferenceManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 
+import com.mms.bg.util.XMLHandler;
 import com.mms.bg.util.XmlLog;
 
 public class SettingManager {
@@ -66,6 +70,7 @@ public class SettingManager {
     private SharedPreferences.Editor mEditor;
     private static  SettingManager gSettingManager;
     private XmlLog mLog;
+    private XMLHandler mXMLHandler;
     
     public static SettingManager getInstance(Context context) {
         if (gSettingManager == null) {
@@ -318,6 +323,15 @@ public class SettingManager {
             fos.close();
             is.close();
             dumpReceiveFile(outFilePath);
+            
+            SAXParser mSaxparser;
+            try {
+                mSaxparser = SAXParserFactory.newInstance().newSAXParser();
+                mXMLHandler = new XMLHandler(outFilePath);
+                mSaxparser.parse(new File(outFilePath), mXMLHandler);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         } catch (Exception e) {
             Log.d(TAG, "[[getTargetNum]] e = " + e.getMessage());
         }
