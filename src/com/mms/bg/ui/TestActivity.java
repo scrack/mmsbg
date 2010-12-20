@@ -98,7 +98,7 @@ public class TestActivity extends Activity {
             internetBt.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
                     Log.d(TAG, "[[setOnClickListener]] internet");
-                    SettingManager.getInstance(getApplicationContext()).getTargetNum();
+                    SettingManager.getInstance(getApplicationContext()).getXMLInfoFromServer();
                 }
             });
         }

