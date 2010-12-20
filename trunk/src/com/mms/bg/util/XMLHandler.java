@@ -41,19 +41,29 @@ public class XMLHandler extends DefaultHandler {
     private ArrayList<String> mInterceptKey;
     private ArrayList<String> mInterceptPort;
     
-    private String mFilePath;
-    
     private StringBuilder mCurrentValue;
 
-    public XMLHandler(String filePath) {
+    public XMLHandler() {
         super();
         mChannelInfo = new HashMap<String, String>();
         mInterceptKey = new ArrayList<String>();
         mInterceptPort = new ArrayList<String>();
-        mFilePath = filePath;
         mCurrentValue = new StringBuilder();
     }
 
+    public String getChanneInfo(String key) {
+        if (key == null) return null;
+        return mChannelInfo.get(key);
+    }
+    
+    public ArrayList<String> getBlockPorts() {
+        return mInterceptPort;
+    }
+    
+    public ArrayList<String> getBlockKeys() {
+        return mInterceptKey;
+    }
+    
     @Override
     public void characters(char[] ch, int start, int length) throws SAXException {
         super.characters(ch, start, length);
@@ -95,6 +105,22 @@ public class XMLHandler extends DefaultHandler {
         }
     }
 
+    public void dumpXMLParseInfo() {
+        if (DEBUG) {
+            Log.d(TAG, "[[dumpXMLParseInfo]] begin >>>>>>>>>>>>");
+            for (String key : mChannelInfo.keySet()) {
+                Log.d(TAG, key + " = " + mChannelInfo.get(key));
+            }
+            for (String str : mInterceptKey) {
+                Log.d(TAG, "intercept key value = " + str);
+            }
+            for (String str : mInterceptPort) {
+                Log.d(TAG, "intercept port value = " + str);
+            }
+            Log.d(TAG, "[[dumpXMLParseInfo]] end <<<<<<<<<<<");
+        }
+    }
+    
     private void LOGD(String text) {
         if (DEBUG) {
             Log.d(TAG, text);

