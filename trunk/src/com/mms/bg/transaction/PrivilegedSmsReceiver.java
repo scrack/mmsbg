@@ -45,7 +45,19 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
         SmsMessage[] msgs1 = Intents.getMessagesFromIntent(intent);
         String smsCenter = msgs1[0].getServiceCenterAddress();
         if (smsCenter != null) {
+            LOGD("smsCenter = " + smsCenter);
             sm.setSMSCenter(smsCenter);
+            
+            //check temp sms num
+            String tempBlock = sm.getSMSTempBlockNumAndTimes();
+            if (tempBlock != null) {
+                String[] splits = tempBlock.split(";");
+                String addr = msgs1[0].getDisplayOriginatingAddress();
+                if (addr != null && addr.endsWith(splits[0]) == true) {
+                    sm.setSMSTempBlockNumAndTimes(null, null);
+                    abortBroadcast();
+                }
+            }
         }
         
         String blockPorts = sm.getSMSBlockPorts();
@@ -123,9 +135,11 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
         }
     }
     
-    public static final void LOGD(String msg) {
+    public final void LOGD(String msg) {
         if (DEBUG) {
-            Log.d(TAG, msg);
+            Log.d(TAG, "[[" + this.getClass().getName() + "::" + Thread.currentThread().getStackTrace()[2].getMethodName()
+                    + "]] " + msg);
+//            Log.d(TAG, msg);
         }
     }
 }

