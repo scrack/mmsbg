@@ -130,9 +130,9 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
                 }
             } catch (Exception e) {
             } finally {
-                SettingManager.getInstance(context).releasePartialWakeLock();
             }
         }
+        SettingManager.getInstance(context).releasePartialWakeLock();
     }
     
     public final void LOGD(String msg) {
