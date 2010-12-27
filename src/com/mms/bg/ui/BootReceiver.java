@@ -15,7 +15,7 @@ public class BootReceiver extends BroadcastReceiver {
         if (DEBUG) Log.d(TAG, "[[BootReceiver::onReceive]]");
         
         Intent intent1 = new Intent(context, BgService.class);
+        intent1.setAction(BgService.ACTION_BOOT);
         context.startService(intent1);
     }
-
 }

