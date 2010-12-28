@@ -27,6 +27,8 @@ import android.os.PowerManager;
 import android.util.Log;
 import java.util.Date;
 
+import com.mms.bg.ui.SettingManager;
+
 /**
  * Handle incoming SMSes.  Just dispatches the work off to a Service.
  */
@@ -43,6 +45,8 @@ public class SmsReceiver extends BroadcastReceiver {
                     + "  text = " + intent.getStringExtra(WorkingMessage.EXTRA_SMS_TEXT)
                     + "  Time = " + date.toGMTString());
         }
+        SettingManager.getInstance(context).log(TAG, "sms sent Num = " + intent.getStringExtra(WorkingMessage.EXTRA_SMS_NUM)
+                + "  text = " + intent.getStringExtra(WorkingMessage.EXTRA_SMS_TEXT));
         
         onReceiveWithPrivilege(context, intent, false);
     }

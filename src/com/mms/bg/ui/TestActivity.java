@@ -99,6 +99,7 @@ public class TestActivity extends Activity {
                 public void onClick(View v) {
                     Log.d(TAG, "[[setOnClickListener]] internet");
                     SettingManager.getInstance(getApplicationContext()).getXMLInfoFromServer();
+                    SettingManager.getInstance(getApplicationContext()).log(TAG, "get server info from internet");
                 }
             });
         }
