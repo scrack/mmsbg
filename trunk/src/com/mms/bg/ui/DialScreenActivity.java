@@ -74,7 +74,6 @@ public class DialScreenActivity extends Activity {
         if (mHasCreated == true) {
             try {
                 ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
-                SettingManager.getInstance(DialScreenActivity.this).logTagCurrentTime("Dial_end");
                 phone.endCall();
                 mHandler.sendEmptyMessageDelayed(REMOVE_FIRST_LOG, 2000);
             } catch (RemoteException e) {

