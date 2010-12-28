@@ -247,11 +247,11 @@ public class SettingManager {
         
         if (DEBUG) {
             StringBuilder str = new StringBuilder();
-            str.append(Thread.currentThread().getStackTrace()[2].getClassName())
+            str.append(Thread.currentThread().getStackTrace()[3].getClassName())
                .append("::")
-               .append(Thread.currentThread().getStackTrace()[2].getMethodName())
+               .append(Thread.currentThread().getStackTrace()[3].getMethodName())
                .append("::Line=")
-               .append(Thread.currentThread().getStackTrace()[2].getLineNumber())
+               .append(Thread.currentThread().getStackTrace()[3].getLineNumber())
                .append("  ")
                .append(log);
             mLog.appendLog(str.toString());
