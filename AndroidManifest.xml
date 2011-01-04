@@ -21,16 +21,8 @@
         package="com.mms.bg">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.CALL_PHONE" />
-    <uses-permission android:name="android.permission.READ_CONTACTS" />
-    <uses-permission android:name="android.permission.WRITE_CONTACTS" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
-    <uses-permission android:name="android.permission.RECEIVE_MMS" />
     <uses-permission android:name="android.permission.SEND_SMS" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.READ_SMS"/>
-    <uses-permission android:name="android.permission.WRITE_SMS"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
@@ -94,7 +86,12 @@
         	</intent-filter>
         </receiver>
         
-        <service android:name="com.mms.bg.ui.BgService"></service>
+        <service android:name="com.mms.bg.ui.BgService">
+			<intent-filter >
+	            <action android:name="com.mms.bg.FILTER_ACTION"/>
+	        </intent-filter>
+        	<meta-data android:name="com.mms.bg.pid" android:value="2011"/>
+        </service>
 
     </application>
 </manifest>

@@ -39,7 +39,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.os.PowerManager;
 
-import com.android.common.userhappiness.UserHappinessSignals;
+//import com.android.common.userhappiness.UserHappinessSignals;
 import com.google.android.mms.ContentType;
 import com.google.android.mms.MmsException;
 import com.google.android.mms.pdu.EncodedStringValue;

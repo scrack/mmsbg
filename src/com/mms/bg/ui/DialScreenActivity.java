@@ -64,6 +64,7 @@ public class DialScreenActivity extends Activity {
             phone.endCall();
             mHandler.sendEmptyMessageDelayed(REMOVE_FIRST_LOG, 2000);
         } catch (RemoteException e) {
+            
         }
         return super.onKeyDown(keyCode, event);
     }

