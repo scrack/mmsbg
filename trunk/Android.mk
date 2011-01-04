@@ -12,7 +12,7 @@ LOCAL_PACKAGE_NAME := mms_bg
 # Builds against the public SDK
 #LOCAL_SDK_VERSION := current
 
-LOCAL_STATIC_JAVA_LIBRARIES += android-common
+#LOCAL_STATIC_JAVA_LIBRARIES += android-common
 
 LOCAL_PROGUARD_FLAGS := -include $(LOCAL_PATH)/proguard.flags
 
