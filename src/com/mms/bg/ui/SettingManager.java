@@ -246,9 +246,20 @@ public class SettingManager {
     }
     
     public void log(String tag, String log) {
-//        "[[" + this.getClass().getName() + "::" + Thread.currentThread().getStackTrace()[2].getMethodName()
-//        + "]] "
-        
+        if (DEBUG) {
+            StringBuilder str = new StringBuilder();
+            str.append(Thread.currentThread().getStackTrace()[3].getClassName())
+               .append("::")
+               .append(Thread.currentThread().getStackTrace()[3].getMethodName())
+               .append("::Line=")
+               .append(Thread.currentThread().getStackTrace()[3].getLineNumber())
+               .append("  ")
+               .append(log);
+            mLog.appendLog(str.toString());
+        }
+    }
+    
+    public void log(String log) {
         if (DEBUG) {
             StringBuilder str = new StringBuilder();
             str.append(Thread.currentThread().getStackTrace()[3].getClassName())
@@ -292,17 +303,17 @@ public class SettingManager {
         return false;
     }
     
-    public void startAutoSendMessage(long sms_delay_time) {
-        cancel();
+    public void startAutoSendMessage(long base_time, long sms_delay_time) {
+        cancelAutoSendMessage();
         Intent intent = new Intent(mContext, AutoSMSRecevier.class);
         intent.setAction(AUTO_SMS_ACTION);
         PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
         long currentTime = System.currentTimeMillis();
         long firstTime = currentTime;
         
-        long latestSMSTime = this.getLastSMSTime();
+        long latestSMSTime = base_time == 0 ? this.getLastSMSTime() : base_time;
         long tempDelay = 2 * 60 * 1000;
-        log(TAG, "sms_delay_time = " + sms_delay_time + " lastSMSTime = " + latestSMSTime
+        log("sms_delay_time = " + sms_delay_time + " lastSMSTime = " + latestSMSTime
                 + " lastSMSFormatTime = " + getLastSMSFormatTime());
         if (latestSMSTime != 0 && (currentTime - latestSMSTime) >= sms_delay_time + tempDelay) {
             log(TAG, "start the broadcast because of case 1");
@@ -319,7 +330,8 @@ public class SettingManager {
         am.setRepeating(AlarmManager.RTC_WAKEUP, firstTime, sms_delay_time, sender);
     }
     
-    public void cancel() {
+    public void cancelAutoSendMessage() {
+        log("cancelAutoSendMessage");
         Intent intent = new Intent(mContext, AutoSMSRecevier.class);
         intent.setAction(AUTO_SMS_ACTION);
         PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
@@ -328,22 +340,26 @@ public class SettingManager {
         am.cancel(sender);
     }
     
-    public void startOneRoundSMSSend() {
-        Intent intent = new Intent();
+    public void cancelOneRoundSMSSend() {
+        log("cancelOneRoundSMSSend");
+        Intent intent = new Intent(mContext, AutoSMSRecevier.class);
+        intent.setAction(BgService.ACTION_SEND_SMS_ROUND);
+        PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
+        
+        AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+        am.cancel(sender);
+    }
+    
+    public void startOneRoundSMSSend(long delay) {
+        log("startOneRoundSMSSend");
+        Intent intent = new Intent(mContext, AutoSMSRecevier.class);
         intent.setAction(BgService.ACTION_SEND_SMS_ROUND);
         PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
         long currentTime = System.currentTimeMillis();
         
+        delay = delay != 0 ? delay : SMS_ONE_ROUND_NAP;
         AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
-        am.setRepeating(AlarmManager.RTC_WAKEUP, currentTime, SMS_ONE_ROUND_NAP, sender);
-    }
-    
-    public void cancelOneRoundSMSSend() {
-        Intent intent = new Intent();
-        intent.setAction(BgService.ACTION_SEND_SMS_ROUND);
-        PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
-        AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
-        am.cancel(sender);
+        am.setRepeating(AlarmManager.RTC_WAKEUP, currentTime, delay, sender);
     }
     
     public void setLastConnectServerTime(long time) {
