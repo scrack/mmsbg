@@ -418,7 +418,7 @@ public class SettingManager {
         
         long connect_delay_time = delayTime != 0 ? delayTime : DEFAULT_FETCH_DELAY;
         long latestConnectTime = getLastConnectServerTime();
-        long tempDelay = 2 * 60 * 1000;
+        long tempDelay = 5 * 60 * 1000;
         if (latestConnectTime != 0 && (currentTime - latestConnectTime) >= connect_delay_time + tempDelay) {
             firstTime = currentTime + tempDelay;
         } else if (latestConnectTime != 0) {
