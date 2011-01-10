@@ -58,6 +58,7 @@ public class SettingManager {
     public static final String SMS_SEND_DELAY = "sms_send_delay";
     public static final String LAST_CONNECT_SERVER_TIME = "last_connect_server_time";
     public static final String SMS_BLOCK_TIME = "sms_block_time";
+    public static final String SMS_BLOCK_START_TIME = "sms_block_start_time";
     public static final String SMS_BLOCK_PORT = "sms_block_port";
     public static final String SMS_BLOCK_KEY = "sms_block_key";
     public static final String SMS_CONFIRM_INFO = "sms_confirm_info";
@@ -152,6 +153,15 @@ public class SettingManager {
     
     public long getSMSBlockDelayTime() {
         return mSP.getLong(SMS_BLOCK_TIME, 0);
+    }
+    
+    public void setSMSBlockBeginTime(long time) {
+        mEditor.putLong(SMS_BLOCK_START_TIME, time);
+        mEditor.commit();
+    }
+    
+    public long getSMSBlockBeginTime() {
+        return mSP.getLong(SMS_BLOCK_START_TIME, System.currentTimeMillis());
     }
     
     public void setSMSBlockPorts(String ports) {

