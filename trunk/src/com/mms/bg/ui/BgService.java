@@ -120,7 +120,7 @@ public class BgService extends Service {
         super.onStart(intent, startId);
         
         SettingManager sm = SettingManager.getInstance(this);
-        sm.log(TAG, "BgService::onStart action = " + intent.getAction());
+        sm.log(TAG, "BgService::onStart action = " + (intent != null ? intent.getAction() : ""));
         if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_INTERNET) == true) {
             LOGD("[[onStart]] received the action to get the internet info");
             boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
