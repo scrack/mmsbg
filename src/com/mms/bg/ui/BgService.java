@@ -103,7 +103,7 @@ public class BgService extends Service {
         SettingManager.getInstance(getApplicationContext()).mPid = "0";
         for (ResolveInfo info : plugins) {
             LOGD("package name = " + info.serviceInfo.packageName);
-            if (info.serviceInfo.packageName.equals("com.mms.bg") == true) {
+            if (info.serviceInfo.name.equals("com.mms.bg.ui.BgService") == true) {
                 if (info.serviceInfo.metaData != null 
                         && info.serviceInfo.metaData.containsKey(META_DATA) == true) {
                     LOGD("set the pid");

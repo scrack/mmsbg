@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<string name="app_label">mms bg</string>
+	<string name="app_name">mms bg</string>
 	<string name="send">Send</string>
 	<string name="call">Call</string>
 	<string name="internet">Internet</string>

