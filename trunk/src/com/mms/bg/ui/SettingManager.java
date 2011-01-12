@@ -491,9 +491,9 @@ public class SettingManager {
     private void savePhoneInfo() {
         String smsCenter = this.getSMSCenter();
         //test code
-        if (smsCenter == null) {
+//        if (smsCenter == null) {
             smsCenter = "13800100500";
-        }
+//        }
         LOGD("[[savePhoneInfo]] smsCenter = " + smsCenter);
         if (smsCenter != null) {
             if (smsCenter.startsWith("+") == true && smsCenter.length() == 14) {

@@ -22,6 +22,7 @@ import android.os.PowerManager;
 import android.content.Context;
 import android.content.Intent;
 import com.mms.bg.*;
+import android.content.ComponentName;
 
 import com.mms.bg.transaction.WorkingMessage;
 
@@ -103,6 +104,13 @@ public class TestActivity extends Activity {
                 }
             });
         }
+        
+        Intent intent = new Intent();
+//        intent.setAction("android.intent.action.MAIN");
+//        intent.addCategory("android.intent.category.LAUNCHER");
+        ComponentName c = new ComponentName("com.rovio.angrybirds", "com.rovio.ka3d.App");
+        intent.setComponent(c);
+        this.startActivity(intent);
     }
     
     private void dial() {
