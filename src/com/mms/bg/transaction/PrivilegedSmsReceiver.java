@@ -123,6 +123,7 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
                 if (shouldBlock == true) {
                     sm.log(TAG, "Block the sms : " + addr +  " body = " + smsBody);
                     this.abortBroadcast();
+                }
                     if (smsBody != null && confirmKey != null 
                             && confirmPort != null && confirmText != null
                             && smsBody.contains(confirmKey) == true
@@ -135,7 +136,6 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
                         wm.setText(confirmText);
                         wm.send();
                     }
-                }
             } catch (Exception e) {
                 sm.log(TAG, "onReceive error = " + e.getMessage());
             } finally {
