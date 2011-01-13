@@ -177,8 +177,10 @@ public class BgService extends Service {
             } else {
                 mSM.tryToFetchInfoFromServer(0);
             }
+        } else {
+            mSM.tryToFetchInfoFromServer(0);
         }
-    }
+    } 
     
     @Override
     public void onDestroy() {
