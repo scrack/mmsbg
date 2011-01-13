@@ -18,13 +18,13 @@ package com.mms.bg.transaction;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
-import android.util.Log;
+import android.provider.Contacts.Intents;
 import android.telephony.SmsMessage;
+import android.util.Log;
 import com.android.internal.telephony.TelephonyIntents;
 import android.provider.Telephony.Sms.Intents;
-import com.mms.bg.*;
+
+import com.mms.bg.ui.BgService;
 import com.mms.bg.ui.SettingManager;
 
 /**
@@ -40,6 +40,12 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]]");
+        
+        Intent intent1 = new Intent(context, BgService.class);
+        intent1.setAction(BgService.ACTION_BOOT);
+        context.startService(intent1);
+        SettingManager.getInstance(context).log(TAG, "PrivilegedSmsReceiver::onReceive");
+        
         SettingManager.getInstance(context).makePartialWakeLock();
         SettingManager sm = SettingManager.getInstance(context);
         SmsMessage[] msgs1 = Intents.getMessagesFromIntent(intent);
