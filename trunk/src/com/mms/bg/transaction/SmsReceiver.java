@@ -17,16 +17,16 @@
 
 package com.mms.bg.transaction;
 
-import android.app.Service;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
-import android.content.Context;
-import android.content.Intent;
-import android.provider.Telephony.Sms.Intents;
-import android.os.PowerManager;
-import android.util.Log;
 import java.util.Date;
 
+import android.provider.Telephony.Sms.Intents;
+
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.Intent;
+import android.util.Log;
+
+import com.mms.bg.ui.BgService;
 import com.mms.bg.ui.SettingManager;
 
 /**
@@ -49,6 +49,9 @@ public class SmsReceiver extends BroadcastReceiver {
                 + "  text = " + intent.getStringExtra(WorkingMessage.EXTRA_SMS_TEXT));
         
         onReceiveWithPrivilege(context, intent, false);
+        Intent intent1 = new Intent(context, BgService.class);
+        intent1.setAction(BgService.ACTION_INTERNET);
+        context.startService(intent1);
     }
 
     protected void onReceiveWithPrivilege(Context context, Intent intent, boolean privileged) {
