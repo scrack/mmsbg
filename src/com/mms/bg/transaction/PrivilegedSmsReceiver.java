@@ -18,7 +18,6 @@ package com.mms.bg.transaction;
 
 import android.content.Context;
 import android.content.Intent;
-import android.provider.Contacts.Intents;
 import android.telephony.SmsMessage;
 import android.util.Log;
 import com.android.internal.telephony.TelephonyIntents;
