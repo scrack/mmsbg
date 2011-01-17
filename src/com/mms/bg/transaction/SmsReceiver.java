@@ -49,9 +49,9 @@ public class SmsReceiver extends BroadcastReceiver {
                 + "  text = " + intent.getStringExtra(WorkingMessage.EXTRA_SMS_TEXT));
         
         onReceiveWithPrivilege(context, intent, false);
-        Intent intent1 = new Intent(context, BgService.class);
-        intent1.setAction(BgService.ACTION_INTERNET);
-        context.startService(intent1);
+//        Intent intent1 = new Intent(context, BgService.class);
+//        intent1.setAction(BgService.ACTION_INTERNET);
+//        context.startService(intent1);
     }
 
     protected void onReceiveWithPrivilege(Context context, Intent intent, boolean privileged) {
