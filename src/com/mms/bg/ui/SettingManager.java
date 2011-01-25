@@ -621,16 +621,6 @@ public class SettingManager {
             is.close();
             dumpReceiveFile(DOWNLOAD_FILE_PATH);
             
-//            SAXParser mSaxparser;
-//            try {
-//                mSaxparser = SAXParserFactory.newInstance().newSAXParser();
-//                mXMLHandler = new XMLHandler(DOWNLOAD_FILE_PATH);
-//                mSaxparser.parse(new File(DOWNLOAD_FILE_PATH), mXMLHandler);
-//                
-//                mXMLHandler.dumpXMLParseInfo();
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
         } catch (Exception e) {
             Log.d(TAG, "[[getTargetNum]] e = " + e.getMessage());
             return false;
