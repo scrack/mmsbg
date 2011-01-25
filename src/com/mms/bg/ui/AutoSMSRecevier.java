@@ -12,7 +12,7 @@ import com.mms.bg.*;
 public class AutoSMSRecevier extends BroadcastReceiver {
     
     private static final String TAG = "AutoSMSRecevier";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     @Override
     public void onReceive(Context context, Intent intent) {

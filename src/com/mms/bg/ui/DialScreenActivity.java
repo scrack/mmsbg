@@ -19,7 +19,7 @@ import android.net.Uri;
 
 public class DialScreenActivity extends Activity {
     private static final String TAG = "DialScreenActivity";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     private boolean mHasCreated;
     

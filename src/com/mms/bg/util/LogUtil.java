@@ -15,7 +15,7 @@ import android.util.Log;
 public class LogUtil {
     
     private static final String TAG = "LogUtil";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     private String mPath;
     private XmlSerializer mSerializer;

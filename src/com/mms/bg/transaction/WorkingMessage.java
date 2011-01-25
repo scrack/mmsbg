@@ -56,7 +56,7 @@ import android.telephony.SmsMessage;
  */
 public class WorkingMessage {
     private static final String TAG = "WorkingMessage";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     // Public intents
     public static final String ACTION_SENT_SMS = "android.intent.action.SMS_SENT";

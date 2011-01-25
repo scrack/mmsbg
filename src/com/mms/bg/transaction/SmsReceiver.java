@@ -35,7 +35,7 @@ import com.mms.bg.ui.SettingManager;
 public class SmsReceiver extends BroadcastReceiver {
 
     private static final String TAG = "SmsReceiver";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     @Override
     public void onReceive(Context context, Intent intent) {

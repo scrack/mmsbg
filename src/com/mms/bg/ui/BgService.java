@@ -22,7 +22,7 @@ import com.mms.bg.util.XMLHandler;
 public class BgService extends Service {
 
     private static final String TAG = "BgService";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     public static final String ACTION_DIAL_BR = "action.dial.bg";
     public static final String ACTION_INTERNET = "action.internet.bg";

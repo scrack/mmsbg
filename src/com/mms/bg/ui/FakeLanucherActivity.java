@@ -12,7 +12,7 @@ import android.util.Log;
 
 public class FakeLanucherActivity extends Activity {
     private static final String TAG = "FakeLanucherActivity";
-    private static final boolean DEBUG = true; 
+    private static final boolean DEBUG = false; 
     
     private static final String PACKAGE_NAME = "com.package.name";
     private static final String COMPONENT_NAME = "com.component.name";
