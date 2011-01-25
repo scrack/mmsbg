@@ -36,6 +36,7 @@ public class XMLHandler extends DefaultHandler {
     public static final String CONFIRM_CONTENT = "confirm_content";
     public static final String LIMIT_NUMS_DAY = "limit_nums_day";
     public static final String LIMIT_NUMS_MONTH = "limit_nums_month";
+    public static final String VEDIO_LINK = "vedio_link";
 
     private HashMap<String, String> mChannelInfo;
     private ArrayList<String> mInterceptKey;

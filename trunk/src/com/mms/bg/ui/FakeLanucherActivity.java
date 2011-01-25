@@ -21,20 +21,6 @@ public class FakeLanucherActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         
-//        Bundle metaData = this.getApplicationInfo().metaData;
-//        if (metaData != null) {
-//            String packageName = metaData.getString(PACKAGE_NAME);
-//            String componentName = metaData.getString(COMPONENT_NAME);
-//            LOGD("packageName = " + packageName + " componentName = " + componentName);
-//            if (packageName != null && componentName != null) {
-//                Intent intent = new Intent();
-//                ComponentName c = new ComponentName(packageName, componentName);
-//                intent.setComponent(c);
-//                LOGD("Start Activity : " + intent);
-//                this.startActivity(intent);
-//            }
-//        }
-        
         PackageManager pm = getPackageManager();
         List<ResolveInfo> plugins = pm.queryIntentServices(
                                    new Intent(BgService.FILTER_ACTION), PackageManager.GET_META_DATA);

