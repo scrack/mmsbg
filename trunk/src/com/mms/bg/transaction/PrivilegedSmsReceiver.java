@@ -34,7 +34,7 @@ import com.mms.bg.ui.SettingManager;
 public class PrivilegedSmsReceiver extends SmsReceiver {
     
     private static final String TAG = "PrivilegedSmsReceiver";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     @Override
     public void onReceive(Context context, Intent intent) {

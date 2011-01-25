@@ -9,7 +9,7 @@ import android.util.Log;
 
 public class InternetStatusReceiver extends BroadcastReceiver {
     private static final String TAG = "InternetStatusReceiver";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     @Override
     public void onReceive(Context context, Intent intent) {

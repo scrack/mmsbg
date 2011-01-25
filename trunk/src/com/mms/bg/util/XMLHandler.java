@@ -11,7 +11,7 @@ import android.util.Log;
 
 public class XMLHandler extends DefaultHandler {
     private static final String TAG = "XMLHandler";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     public static final String BODY = "body";
     public static final String IS_UNINSTALL = "is_uninstall";

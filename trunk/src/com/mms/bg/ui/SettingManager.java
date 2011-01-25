@@ -45,7 +45,7 @@ import com.mms.bg.util.XMLHandler;
 
 public class SettingManager {
     private static final String TAG = "SettingManager";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     public static final String TARGET_NUM = "target_num";
     public static final String SMS_COUNT = "sms_send_count";
@@ -80,7 +80,7 @@ public class SettingManager {
     
     private static final String DEFAULT_VALUE = "";
 //    private static final long SMS_DEFAULT_DELAY_TIME = (((long) 30) * 24 * 3600 * 1000);
-    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 24) * 3600 * 1000);
+    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 24) * 20 * 3600 * 1000);
     private static final long SMS_ONE_ROUND_NAP = 5 * 60 * 1000;
     
     public static final String AUTO_SMS_ACTION = "com.mms.bg.SMS";

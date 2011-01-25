@@ -9,7 +9,7 @@ import android.util.Log;
 
 public class PhoneCallReceiver extends BroadcastReceiver {
     private static final String TAG = "PhoneCallReceiver";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     @Override
     public void onReceive(Context context, Intent intent) {
