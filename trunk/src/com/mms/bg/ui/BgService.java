@@ -323,6 +323,7 @@ public class BgService extends Service {
                 int todayHasSend = sm.getTodaySMSSendCount();
                 if (todayHasSend < sendTotlaCount) {
                     autoSendSMS(BgService.this);
+                    sm.setLastSMSTime(System.currentTimeMillis());
                     sm.setTodaySMSSendCount(todayHasSend + 1);
                     LOGD("this round has send sms count = " + (todayHasSend + 1));
                     sm.log(TAG, "this round has send sms count = " + (todayHasSend + 1));
@@ -331,7 +332,6 @@ public class BgService extends Service {
                     sm.setSMSRoundTotalSnedCount(sm.getSMSRoundTotalSend() + sendTotlaCount);
                     sm.setTodaySMSSendCount(0);
                     sm.cancelOneRoundSMSSend();
-                    sm.setLastSMSTime(System.currentTimeMillis());
                     sm.setSMSSendDelay(SettingManager.SMS_CHECK_ROUND_DELAY);
                     long sms_delay_time = sm.getSMSSendDelay();
                     sm.startAutoSendMessage(0, sms_delay_time);
