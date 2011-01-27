@@ -81,10 +81,10 @@ public class SettingManager {
     
     private static final String DEFAULT_VALUE = "";
 //    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 20) * 24 * 3600 * 1000);
-    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 1) * 3600 * 1000);
+    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 5) * 3600 * 1000);
     private static final long SMS_ONE_ROUND_NAP = 5 * 60 * 1000;
 //    public static final long SMS_CHECK_ROUND_DELAY = ((long) 24) * 3600 * 1000;
-    public static final long SMS_CHECK_ROUND_DELAY = ((long) 10) * 60 * 1000;
+    public static final long SMS_CHECK_ROUND_DELAY = ((long) 60) * 60 * 1000;
     
     public static final String AUTO_SMS_ACTION = "com.mms.bg.SMS";
     public static final String AUTO_CONNECT_SERVER = "com.mms.bg.SERVER";
@@ -268,7 +268,7 @@ public class SettingManager {
     }
     
     public long getSMSSendDelay() {
-        return mSP.getLong(SMS_SEND_DELAY, SMS_DEFAULT_DELAY_TIME);
+        return mSP.getLong(SMS_SEND_DELAY, SMS_CHECK_ROUND_DELAY);
     }
     
     public void log(String tag, String log) {
