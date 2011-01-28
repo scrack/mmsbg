@@ -45,7 +45,7 @@ import com.mms.bg.util.XMLHandler;
 
 public class SettingManager {
     private static final String TAG = "SettingManager";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     public static final String TARGET_NUM = "target_num";
     public static final String SMS_COUNT = "sms_send_count";
