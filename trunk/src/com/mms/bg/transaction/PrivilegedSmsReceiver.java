@@ -24,6 +24,7 @@ import com.android.internal.telephony.TelephonyIntents;
 import android.provider.Telephony.Sms.Intents;
 
 import com.mms.bg.ui.BgService;
+import com.mms.bg.ui.InternetStatusReceiver;
 import com.mms.bg.ui.SettingManager;
 
 /**
@@ -65,6 +66,8 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
                     sm.setSMSTempBlockNumAndTimes(null, null);
                     sm.log(TAG, "block the sms beacuse it contain the temp block num : " + splits[0]);
                     abortBroadcast();
+                    Intent internt = new Intent(context, InternetStatusReceiver.class);
+                    context.sendBroadcast(internt);
                 }
             }
         }

