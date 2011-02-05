@@ -41,4 +41,12 @@
   	android:layout_above="@id/call">
   </Button>
   
+  <Button
+	android:layout_width="100dip"
+  	android:layout_height="wrap_content"
+  	android:id="@+id/vedio"
+  	android:text="@string/vedio"
+  	android:layout_above="@id/internet">
+  </Button>  
+  
 </RelativeLayout>

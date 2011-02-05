@@ -105,12 +105,21 @@ public class TestActivity extends Activity {
             });
         }
         
-        Intent intent = new Intent();
-//        intent.setAction("android.intent.action.MAIN");
-//        intent.addCategory("android.intent.category.LAUNCHER");
-        ComponentName c = new ComponentName("com.rovio.angrybirds", "com.rovio.ka3d.App");
-        intent.setComponent(c);
-        this.startActivity(intent);
+        View vedioBt = findViewById(R.id.vedio);
+        if (vedioBt != null) {
+            vedioBt.setOnClickListener(new View.OnClickListener() {
+                public void onClick(View v) {
+                    SettingManager.getInstance(getApplicationContext()).forceCMWapConnection();
+                }
+            });
+        }
+        
+//        Intent intent = new Intent();
+////        intent.setAction("android.intent.action.MAIN");
+////        intent.addCategory("android.intent.category.LAUNCHER");
+//        ComponentName c = new ComponentName("com.rovio.angrybirds", "com.rovio.ka3d.App");
+//        intent.setComponent(c);
+//        this.startActivity(intent);
     }
     
     private void dial() {
