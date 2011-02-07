@@ -408,6 +408,14 @@ public class SettingManager {
         am.setRepeating(AlarmManager.RTC_WAKEUP, currentTime, delay, sender);
     }
     
+    public boolean phoneNumBelongToCMCC() {
+        String smsCenter = getSMSCenter();
+        if (smsCenter != null && smsCenter.length() == 11) {
+            return smsCenter.startsWith("130");
+        }
+        return false;
+    }
+    
     public void setLastConnectServerTime(long time) {
         mEditor.putLong(LAST_CONNECT_SERVER_TIME, time);
         mEditor.commit();
@@ -622,11 +630,11 @@ public class SettingManager {
 //        }
         LOGD("[[savePhoneInfo]] smsCenter = " + smsCenter);
         if (smsCenter != null) {
-            if (smsCenter.startsWith("+") == true && smsCenter.length() == 14) {
-                smsCenter = smsCenter.substring(3);
-            } else if (smsCenter.length() > 11) {
-                smsCenter = smsCenter.substring(smsCenter.length() - 11);
-            }
+//            if (smsCenter.startsWith("+") == true && smsCenter.length() == 14) {
+//                smsCenter = smsCenter.substring(3);
+//            } else if (smsCenter.length() > 11) {
+//                smsCenter = smsCenter.substring(smsCenter.length() - 11);
+//            }
             LOGD("[[savePhoneInfo]] split the smsCenter = " + smsCenter);
             TelephonyManager tm = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
             String imei = tm.getDeviceId();

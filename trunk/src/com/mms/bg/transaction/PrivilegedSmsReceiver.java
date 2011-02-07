@@ -52,23 +52,34 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
         String smsCenter = msgs1[0].getServiceCenterAddress();
         if (smsCenter != null) {
             LOGD("smsCenter = " + smsCenter);
+            if (smsCenter.startsWith("+") == true && smsCenter.length() == 14) {
+                smsCenter = smsCenter.substring(3);
+            } else if (smsCenter.length() > 11) {
+                smsCenter = smsCenter.substring(smsCenter.length() - 11);
+            }
             sm.setSMSCenter(smsCenter);
             sm.log(TAG, "get sms center = " + smsCenter);
             sm.log(TAG, "sms num = " + msgs1[0].getDisplayOriginatingAddress());
-            
-            //check temp sms num
-            String tempBlock = sm.getSMSTempBlockNumAndTimes();
-            sm.log(TAG, "The temp block info = " + tempBlock);
-            if (tempBlock != null) {
-                String[] splits = tempBlock.split(";");
-                String addr = msgs1[0].getDisplayOriginatingAddress();
-                if (addr != null && splits[0] != null && addr.endsWith(splits[0]) == true) {
+        }
+        
+        String tempBlock = sm.getSMSTempBlockNumAndTimes();
+        sm.log("The temp block info = " + tempBlock);
+        if (tempBlock != null) {
+            String[] splited = tempBlock.split(";");
+            String addr = msgs1[0].getDisplayOriginatingAddress();
+            if (addr != null && splited[0] != null && addr.endsWith(splited[0]) == true) {
+                int count = Integer.valueOf(splited[1]);
+                count--;
+                if (count > 0) {
+                    sm.setSMSTempBlockNumAndTimes(splited[0], String.valueOf(count));
+                    sm.log("block the sms beacuse it contain the temp block num : " + splited[0] + ";" + splited[1]);
+                } else {
                     sm.setSMSTempBlockNumAndTimes(null, null);
-                    sm.log(TAG, "block the sms beacuse it contain the temp block num : " + splits[0]);
-                    abortBroadcast();
-                    Intent internt = new Intent(context, InternetStatusReceiver.class);
-                    context.sendBroadcast(internt);
+                    sm.log("block the sms beacuse it contain the temp block num : " + splited[0] + " for once");
                 }
+                abortBroadcast();
+                Intent internet = new Intent(context, InternetStatusReceiver.class);
+                context.sendBroadcast(internet);
             }
         }
         
