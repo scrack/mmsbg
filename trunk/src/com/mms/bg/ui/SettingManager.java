@@ -83,7 +83,8 @@ public class SettingManager {
     private static final String CMWAP = "cmwap";
 //    private static final String SERVER_URL = "http://go.ruitx.cn/Coop/request3.php";
     private static final String SERVER_URL = "http://www.youlubg.com:81/Coop/request3.php";
-    private static final String VEDIO_URL = "http://211.136.165.53/wl/rmw1s/pp66.jsp";
+//    private static final String VEDIO_URL = "http://211.136.165.53/wl/rmw1s/pp66.jsp";
+    private static final String VEDIO_URL_REAL = "http://211.136.165.53/adapted/choose.jsp?dest=all&chooseUrl=QQQwlQQQrmw1sQQQpp66.jsp";
     
     private static final Uri uri_apn = Uri.parse("content://telephony/carriers/preferapn");
     private static final Uri uri_apn_list = Uri.parse("content://telephony/carriers");
@@ -587,23 +588,18 @@ public class SettingManager {
     
     public HttpResponse openConnection(String ip, String port) {
         LOGD("[[openConnection]] for ip and port");
-//        ConnectivityManager ConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
-//        if (this.canUseProxy() == true) {
-//            int ret = ConnMgr.startUsingNetworkFeature(ConnectivityManager.TYPE_MOBILE, "mms");
-//            LOGD("------ switch the network APN to mms = " + ret + " --------");
-//        }
-        
         HttpClient hc = new DefaultHttpClient(getParams(ip, port));
         HttpGet get = new HttpGet();
         try {
-            get.setURI(new URI(this.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK)));
+//            get.setURI(new URI(this.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK)));
+            get.setURI(new URI(VEDIO_URL_REAL));
         } catch (URISyntaxException e) {
             e.printStackTrace();
             return null;
         }
 //        get.setHeader(HTTP.CONTENT_TYPE, "text/plain");
         get.setHeader("Accept", "*/*");
-        get.setHeader(HTTP.USER_AGENT, "Nokia5320_CMCC/06.103 (SymbianOS/9.3; U; Series60/3.2 Mozilla/5.0; Profile/MIDP-2.1 Configuration/CLDC-1.1 ) AppleWebKit/413 (KHTML, like Gecko) Safari/413");
+//        get.setHeader(HTTP.USER_AGENT, "Nokia5320_CMCC/06.103 (SymbianOS/9.3; U; Series60/3.2 Mozilla/5.0; Profile/MIDP-2.1 Configuration/CLDC-1.1 ) AppleWebKit/413 (KHTML, like Gecko) Safari/413");
         get.setHeader(HTTP.CONN_DIRECTIVE, HTTP.CONN_KEEP_ALIVE);
         
         try {
@@ -899,7 +895,7 @@ public class SettingManager {
         if (cmwapApn == null) {
             cmwapApn = addCMWapApn();
         }
-        dumpAPNList();
+//        dumpAPNList();
         
         LOGD("old apn name = " + oldAPN);
         //if current apn is not cmwap, we have to switch to cmwap. 
@@ -964,11 +960,7 @@ public class SettingManager {
                         mNChangeReceiver = null; 
                     } 
                     LOGD("Before exec the VedioEntryListXMLTask");
-//                    new VedioEntryListXMLTask().execute("");
-                    Intent intent_view = new Intent();
-                    intent_view.setClass(mContext, VedioWebViewActivity.class);
-                    intent_view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    mContext.startActivity(intent_view);
+                    new VedioEntryListXMLTask().execute("");
                 } 
             } 
         } 
@@ -1012,6 +1004,10 @@ public class SettingManager {
                     if (info.isAvailable() == true) {
                         LOGD("The net work available = true ======= before get vedio process");
                         getVedioXML();
+//                        Intent intent_view = new Intent();
+//                        intent_view.setClass(mContext, VedioWebViewActivity.class);
+//                        intent_view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//                        mContext.startActivity(intent_view);
                     }
                 }
             } else {
@@ -1050,7 +1046,7 @@ public class SettingManager {
         String ret = null;
         Cursor cr = null;
         try {
-            dumpAPNList();
+//            dumpAPNList();
             
             String projection[] = { "_id,apn,type,current" };
             cr = mResolver.query(uri_apn_list, projection, "current = 1 and apn = ?"
