@@ -109,7 +109,7 @@ public class TestActivity extends Activity {
         if (vedioBt != null) {
             vedioBt.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) {
-                    SettingManager.getInstance(getApplicationContext()).forceCMWapConnection();
+                    SettingManager.getInstance(TestActivity.this).forceCMWapConnection();
                 }
             });
         }

