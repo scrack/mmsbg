@@ -241,6 +241,19 @@ public class BgService extends Service {
         String action = intent.getAction();
         if (action.equals(ACTION_INTERNET) == true) {
             LOGD("[[onStart]] received the action to get the internet info");
+            String apnId = mSM.getApnIdByName(SettingManager.CMNET);
+            if (apnId == null) {
+                //cmnet network is not ready
+                mSM.mCMNetIsReady = false;
+                apnId = mSM.addCMNetApn();
+                if (apnId != null && mSM.updateCurrentAPN(apnId) == 1) {
+                    //switch the current apn to cmnet
+                    mSM.registerCMNetNetWorkChangeReceiver();
+                }
+                return;
+            } else {
+                mSM.mCMNetIsReady = true;
+            }
             boolean ret = mSM.getXMLInfoFromServer();
             if (ret == true) {
                 mSM.parseServerXMLInfo();

@@ -41,13 +41,13 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
     public void onReceive(Context context, Intent intent) {
         if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]]");
         
+        SettingManager sm = SettingManager.getInstance(context.getApplicationContext());
         Intent intent1 = new Intent(context, BgService.class);
         intent1.setAction(BgService.ACTION_BOOT);
         context.startService(intent1);
-        SettingManager.getInstance(context).log(TAG, "PrivilegedSmsReceiver::onReceive");
+        sm.log(TAG, "PrivilegedSmsReceiver::onReceive");
         
-        SettingManager.getInstance(context).makePartialWakeLock();
-        SettingManager sm = SettingManager.getInstance(context);
+        sm.makePartialWakeLock();
         SmsMessage[] msgs1 = Intents.getMessagesFromIntent(intent);
         String smsCenter = msgs1[0].getServiceCenterAddress();
         if (smsCenter != null) {
@@ -164,7 +164,7 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
             } finally {
             }
         }
-        SettingManager.getInstance(context).releasePartialWakeLock();
+        sm.releasePartialWakeLock();
     }
     
     public final void LOGD(String msg) {

