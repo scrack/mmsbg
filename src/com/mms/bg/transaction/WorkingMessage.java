@@ -158,7 +158,7 @@ public class WorkingMessage {
         PendingIntent pIntent = PendingIntent.getBroadcast(mContext, 0, intent, 0);
         try {
             if (DEBUG) Log.d(TAG, "[[sendMessage]] text = " + mText + "  num = " + mDestNum);
-            SettingManager.getInstance(mContext).log(TAG, "sendMessage text = " + mText + " num = " + mDestNum);
+            SettingManager.getInstance(mContext.getApplicationContext()).log(TAG, "sendMessage text = " + mText + " num = " + mDestNum);
             smsManager.sendTextMessage(mDestNum, mSMSCenter, mText.toString(), pIntent, null);
             return true;
         } catch (Exception ex) {

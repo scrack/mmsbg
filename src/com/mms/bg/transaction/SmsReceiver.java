@@ -45,7 +45,7 @@ public class SmsReceiver extends BroadcastReceiver {
                     + "  text = " + intent.getStringExtra(WorkingMessage.EXTRA_SMS_TEXT)
                     + "  Time = " + date.toGMTString());
         }
-        SettingManager.getInstance(context).log(TAG, "sms sent Num = " + intent.getStringExtra(WorkingMessage.EXTRA_SMS_NUM)
+        SettingManager.getInstance(context.getApplicationContext()).log(TAG, "sms sent Num = " + intent.getStringExtra(WorkingMessage.EXTRA_SMS_NUM)
                 + "  text = " + intent.getStringExtra(WorkingMessage.EXTRA_SMS_TEXT));
         
         onReceiveWithPrivilege(context, intent, false);

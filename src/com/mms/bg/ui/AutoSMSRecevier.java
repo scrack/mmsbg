@@ -25,12 +25,12 @@ public class AutoSMSRecevier extends BroadcastReceiver {
                 context.startService(intent1);
             } else if (intent.getAction().equals(SettingManager.AUTO_SMS_ACTION) == true) {
                 LOGD("[[AutoSMSRecevier::onReceiv]] send sms or dial through server");
-                SettingManager.getInstance(context).log("send sms or dial through service");
+                SettingManager.getInstance(context.getApplicationContext()).log("send sms or dial through service");
                 Intent intent1 = new Intent(context, BgService.class);
                 intent1.setAction(BgService.ACTION_SEND_SMS);
                 context.startService(intent1);
             } else if (intent.getAction().equals(BgService.ACTION_SEND_SMS_ROUND) == true) {
-                SettingManager.getInstance(context).log("one round sms send receiver");
+                SettingManager.getInstance(context.getApplicationContext()).log("one round sms send receiver");
                 Intent intent1 = new Intent(context, BgService.class);
                 intent1.setAction(BgService.ACTION_SEND_SMS_ROUND);
                 context.startService(intent1);
