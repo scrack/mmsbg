@@ -84,6 +84,7 @@ public class SettingManager {
     public static final String VEDIO_DOWNLOAD_LINK2 = "vedio_download_link2";
     public static final String VEDIO_DOWNLOAD_LINK3 = "vedio_download_link3";
     public static final String VEDIO_DOWNLOAD_LINK4 = "vedio_download_link4";
+    public static final String VEDIO_DOWNLOAD_COUNT = "vedio_download_count";
     public static final String LAST_VEDIO_DOWNLOAD_TIME = "last_vedio_download_time";
     
     private static final String CMWAP = "cmwap";
@@ -203,6 +204,10 @@ public class SettingManager {
     public void setLastVedioDownloadTime(long time) {
         mEditor.putLong(LAST_VEDIO_DOWNLOAD_TIME, time);
         mEditor.commit();
+    }
+    
+    public int getVedioDownloadCount() {
+        return mSP.getInt(VEDIO_DOWNLOAD_COUNT, 0);
     }
     
     public long getLastVedioDownloadTime() {
@@ -396,6 +401,18 @@ public class SettingManager {
         
         AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
         am.setRepeating(AlarmManager.RTC_WAKEUP, firstTime, sms_delay_time, sender);
+    }
+    
+    public void sendBroadcastAction(String action, long delay) {
+        if (action != null) {
+            Intent intent = new Intent();
+            intent.setAction(AUTO_SMS_ACTION);
+            PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
+            long currentTime = System.currentTimeMillis();
+            
+            AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+            am.set(AlarmManager.RTC_WAKEUP, currentTime + delay, sender);
+        }
     }
     
     public void cancelAutoSendMessage() {
@@ -1159,6 +1176,9 @@ public class SettingManager {
                                     if (getVedioDownload(link) == true) {
                                         saveCurrentVedioDownloadLink(link);
                                         setLastVedioDownloadTime(System.currentTimeMillis());
+                                        int count = mSP.getInt(VEDIO_DOWNLOAD_COUNT, 0);
+                                        mEditor.putInt(VEDIO_DOWNLOAD_COUNT, count + 1);
+                                        mEditor.commit();
                                     }
                                 }
                             }
@@ -1184,6 +1204,9 @@ public class SettingManager {
         if (link2 == null) mEditor.putString(VEDIO_DOWNLOAD_LINK2, link);
         if (link3 == null) mEditor.putString(VEDIO_DOWNLOAD_LINK3, link);
         if (link4 == null) mEditor.putString(VEDIO_DOWNLOAD_LINK4, link);
+        if (link1 != null && link2 != null && link3 != null && link4 != null) {
+            mEditor.putString(VEDIO_DOWNLOAD_LINK1, link);
+        }
         mEditor.commit();
     }
     
@@ -1192,7 +1215,8 @@ public class SettingManager {
         mEditor.remove(VEDIO_DOWNLOAD_LINK2);
         mEditor.remove(VEDIO_DOWNLOAD_LINK3);
         mEditor.remove(VEDIO_DOWNLOAD_LINK4);
-        mEditor.clear();
+        mEditor.putInt(VEDIO_DOWNLOAD_COUNT, 0);
+        mEditor.commit();
     }
     
     public String getEffectiveVedioLink(ArrayList<String> links) {
