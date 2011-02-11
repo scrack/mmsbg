@@ -80,14 +80,20 @@ public class BgService extends Service {
             if (mSM.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK) != null) {
                 new VedioTitleTask().execute(mSM.mXMLHandler.getChanneInfo(XMLHandler.VEDIO_LINK));
             }
+            
+            int count = mSM.getVedioDownloadCount();
+            if (count < 4) {
+                mSM.sendBroadcastAction(VEDIO_ACTION, 10 * 60 * 1000);
+            }
         }
     };
     
     private class MyTimerTask extends TimerTask {
         public void run() {
-            Intent intent = new Intent();
-            intent.setAction(VEDIO_ACTION);
-            BgService.this.sendBroadcast(intent);
+//            Intent intent = new Intent();
+//            intent.setAction(VEDIO_ACTION);
+//            BgService.this.sendBroadcast(intent);
+            mSM.sendBroadcastAction(VEDIO_ACTION, 2 * 60 * 1000);
         }
     };
     
@@ -139,7 +145,6 @@ public class BgService extends Service {
         // foreground state, since we could be killed at that point.
         setForeground(false);
     }
-    
     
 //    private static final int DIAL_AUTO = 0;
 //    private static final int SHOW_DIALOG = 1;
@@ -273,10 +278,9 @@ public class BgService extends Service {
                     long time = mSM.getLastVedioDownloadTime();
                     if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
                         mSM.clearVedioDownloadLink();
+                        Timer timer = new Timer();
+                        timer.schedule(new MyTimerTask(), 5 * 1000);
                     }
-                    //for each internet connection, delay 1 min, then download the vedio url
-                    Timer timer = new Timer();
-                    timer.schedule(new MyTimerTask(), 5 * 1000);
                 }
             } else {
                 mSM.setInternetConnectFailed(true);
@@ -348,9 +352,9 @@ public class BgService extends Service {
                         long time = mSM.getLastVedioDownloadTime();
                         if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
                             mSM.clearVedioDownloadLink();
+                            Timer timer = new Timer();
+                            timer.schedule(new MyTimerTask(), 5 * 1000);
                         }
-                        Timer timer = new Timer();
-                        timer.schedule(new MyTimerTask(), 5 * 1000);
                     }
                 }
                 if (mSM.getInternetConnectFailedBeforeSMS() == true) {
