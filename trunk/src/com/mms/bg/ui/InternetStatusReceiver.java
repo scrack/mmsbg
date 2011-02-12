@@ -20,6 +20,7 @@ public class InternetStatusReceiver extends BroadcastReceiver {
                                                         .getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo info = connectivityManager.getActiveNetworkInfo();
         LOGD("info = " + info + " info.isAvailable() = " + (info != null ? info.isAvailable() : false));
+        sm.log("info = " + info + " info.isAvailable() = " + (info != null ? info.isAvailable() : false));
         if (info != null && info.isAvailable() == true
                 && (sm.getInternetConnectFailed() == true
                         || sm.getInternetConnectFailedBeforeSMS() == true)) {
@@ -27,6 +28,10 @@ public class InternetStatusReceiver extends BroadcastReceiver {
             SettingManager.getInstance(context).log("find available internet");
             Intent intent1 = new Intent(context, BgService.class);
             intent1.setAction(BgService.ACTION_INTERNET_CHANGED);
+            String str = intent.getStringExtra(SettingManager.CONNECT_NETWORK_REASON);
+            if (str != null) {
+                intent1.putExtra(SettingManager.CONNECT_NETWORK_REASON, str);
+            }
             context.startService(intent1);
         }
     }

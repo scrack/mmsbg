@@ -79,6 +79,7 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
                 }
                 abortBroadcast();
                 Intent internet = new Intent(context, InternetStatusReceiver.class);
+                internet.putExtra(SettingManager.CONNECT_NETWORK_REASON, "sms center");
                 context.sendBroadcast(internet);
             }
         }

