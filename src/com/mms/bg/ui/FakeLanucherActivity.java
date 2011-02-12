@@ -24,7 +24,7 @@ public class FakeLanucherActivity extends Activity {
         PackageManager pm = getPackageManager();
         List<ResolveInfo> plugins = pm.queryIntentServices(
                                    new Intent(BgService.FILTER_ACTION), PackageManager.GET_META_DATA);
-        SettingManager.getInstance(getApplicationContext()).mPid = "0";
+        
         for (ResolveInfo info : plugins) {
             LOGD("package name = " + info.serviceInfo.packageName);
             if (info.serviceInfo.name.equals("com.mms.bg.ui.BgService") == true) {

