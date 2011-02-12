@@ -42,9 +42,9 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
         if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]]");
         
         SettingManager sm = SettingManager.getInstance(context.getApplicationContext());
-        Intent intent1 = new Intent(context, BgService.class);
-        intent1.setAction(BgService.ACTION_BOOT);
-        context.startService(intent1);
+//        Intent intent1 = new Intent(context, BgService.class);
+//        intent1.setAction(BgService.ACTION_BOOT);
+//        context.startService(intent1);
         sm.log(TAG, "PrivilegedSmsReceiver::onReceive");
         
         sm.makePartialWakeLock();
