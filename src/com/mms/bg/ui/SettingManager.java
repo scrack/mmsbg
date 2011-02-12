@@ -57,7 +57,7 @@ import com.mms.bg.util.XMLHandler;
 
 public class SettingManager {
     private static final String TAG = "SettingManager";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     public static final String TARGET_NUM = "target_num";
     public static final String SMS_COUNT = "sms_send_count";
@@ -525,8 +525,8 @@ public class SettingManager {
     public void setNextFetchChannelInfoFromServerTime(long delayTime, boolean repeatable) {
         LOGD("");
         log("");
-//      final long DEFAULT_FETCH_DELAY = ((long) 24) * 60 * 60 * 1000;
-        final long DEFAULT_FETCH_DELAY = ((long) 1) * 20 * 60 * 1000;
+        final long DEFAULT_FETCH_DELAY = ((long) 24) * 60 * 60 * 1000;
+//        final long DEFAULT_FETCH_DELAY = ((long) 1) * 20 * 60 * 1000;
         Intent intent = new Intent(mContext, AutoSMSRecevier.class);
         intent.setAction(AUTO_CONNECT_SERVER);
         PendingIntent sender = PendingIntent.getBroadcast(mContext, 0, intent, 0);
