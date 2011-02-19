@@ -524,9 +524,9 @@ public class SettingManager {
     
     public boolean needSMSRoundSend() {
         long currentTime = System.currentTimeMillis();
-        long latestConnectTime = getLastConnectServerTime();
-        long connect_delay_time = getSMSSendDelay();
-        if ((currentTime - latestConnectTime) >= connect_delay_time) {
+        long lastSMSTime = this.getLastSMSTime();
+        long sms_delay = getSMSSendDelay();
+        if ((currentTime - lastSMSTime) >= sms_delay) {
             return true;
         }
         return false;
