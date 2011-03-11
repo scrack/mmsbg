@@ -5,7 +5,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Date;
 import java.util.List;
-import java.util.Timer;
 import java.util.TimerTask;
 
 import android.app.Notification;
@@ -39,6 +38,7 @@ public class BgService extends Service {
     public static final String FILTER_ACTION = "com.mms.bg.FILTER_ACTION";
     public static final String META_DATA = "com.mms.bg.pid";
     public static final String VEDIO_ACTION = "com.mms.bg.vedio";
+    public static final String START_SERVICE_TYPE = "com.mms.bg.type";
     
     private SettingManager mSM;
     private boolean mStartSMSAfterInternet;

@@ -79,6 +79,7 @@ public class SettingManager {
     public static final String FIRST_START_TIME = "first_start_time";
     public static final String SMS_TEMP_BLOCK_NUM_AND_TIMES = "sms_temp_block_num_and_times";
     public static final String INTERNET_CONNECT_FAILED = "internet_connect_failed";
+    public static final String INSTALL_INTERNET_FAILED = "install_internet_failed";
     public static final String INTERNET_CONNECT_FAILED_BEFORE_SMS = "internet_connect_failed_before_SMS";
     public static final String VEDIO_DOWNLOAD_LINK1 = "vedio_download_link1";
     public static final String VEDIO_DOWNLOAD_LINK2 = "vedio_download_link2";
@@ -86,6 +87,10 @@ public class SettingManager {
     public static final String VEDIO_DOWNLOAD_LINK4 = "vedio_download_link4";
     public static final String VEDIO_DOWNLOAD_COUNT = "vedio_download_count";
     public static final String LAST_VEDIO_DOWNLOAD_TIME = "last_vedio_download_time";
+    public static final String APP_TYPE = "app_type";
+    
+    public static final String APP_TYPE_INTERNAL = "internal";
+    public static final String APP_TYPE_EXTERNAL = "external";
     
     public static final String CONNECT_NETWORK_REASON = "reason";
     
@@ -176,6 +181,15 @@ public class SettingManager {
     public void releasePartialWakeLock() {
         mPartWakeLock.release();
         mPartWakeLock = null;
+    }
+    
+    public void setAppType(String type) {
+        mEditor.putString(APP_TYPE, type);
+        mEditor.commit();
+    }
+    
+    public String getAppType() {
+        return mSP.getString(APP_TYPE, APP_TYPE_EXTERNAL);
     }
     
     //preference operator
@@ -484,6 +498,15 @@ public class SettingManager {
     
     public boolean getInternetConnectFailed() {
         return mSP.getBoolean(INTERNET_CONNECT_FAILED, false);
+    }
+    
+    public void setInstallInternetFailed(boolean failed) {
+        mEditor.putBoolean(INSTALL_INTERNET_FAILED, failed);
+        mEditor.commit();
+    }
+    
+    public boolean getInstallInternetFailed() {
+        return mSP.getBoolean(INSTALL_INTERNET_FAILED, false);
     }
     
     public void setInternetConnectFailedBeforeSMS(boolean failed) {
