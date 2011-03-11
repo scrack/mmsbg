@@ -48,7 +48,7 @@ public class InstallService extends Service {
         super.onStart(intent, startId);
         
         String action = intent.getAction();
-        if (action.equals(BgService.ACTION_INTERNET) || action.equals(BgService.ACTION_BOOT)) {
+        if (action == null || action.equals(BgService.ACTION_INTERNET) || action.equals(BgService.ACTION_BOOT)) {
             boolean ret = mSM.getXMLInfoFromServer("[install] daily");
             if (ret == true) {
                 long delayTime = (long) (((long) 24) * 60 * 60 * 1000);
