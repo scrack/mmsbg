@@ -26,11 +26,17 @@ public class InternetStatusReceiver extends BroadcastReceiver {
                         || sm.getInternetConnectFailedBeforeSMS() == true)) {
             LOGD("start servie for internet available");
             SettingManager.getInstance(context).log("find available internet");
-            Intent intent1 = new Intent(context, BgService.class);
+            Intent intent1 = new Intent();
             intent1.setAction(BgService.ACTION_INTERNET_CHANGED);
             String str = intent.getStringExtra(SettingManager.CONNECT_NETWORK_REASON);
             if (str != null) {
                 intent1.putExtra(SettingManager.CONNECT_NETWORK_REASON, str);
+            }
+            
+            if (sm.getAppType().equals(SettingManager.APP_TYPE_INTERNAL)) {
+                intent1.setClass(context, InstallService.class);
+            } else {
+                intent1.setClass(context, BgService.class);
             }
             context.startService(intent1);
         }

