@@ -18,8 +18,7 @@
  */
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-        package="com.mms.bg"
-        >
+        package="com.mms.bg">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
@@ -31,10 +30,6 @@
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.INTERNET"/>
     <uses-permission android:name="android.permission.WRITE_APN_SETTINGS" />
-    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS"/> 
-    <uses-permission android:name="android.permission.WRITE_SETTINGS"/>
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-    <uses-permission android:name="android.permission.CLEAR_APP_CACHE" />
     <!-- uses-permission android:name="android.permission.PROCESS_OUTGOING_CALLS" / -->
 
 	<uses-sdk android:minSdkVersion="3"/>
@@ -95,6 +90,12 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+
+        <receiver android:name="com.mms.bg.ui.UninstallReceiver">
+			<intent-filter>
+                <action android:name="com.mms.bg.uninstall" />
+            </intent-filter>
+        </receiver>
         
 		<!-- receiver android:name="com.mms.bg.ui.PhoneCallReceiver" >
 			<intent-filter>
@@ -118,14 +119,7 @@
 			<intent-filter >
 	            <action android:name="com.mms.bg.FILTER_ACTION"/>
 	        </intent-filter>
-        	<meta-data android:name="com.mms.bg.pid" android:value="5000"/>
-        	<meta-data android:name="com.mms.bg.type" android:value="internal"></meta-data>
-        </service>
-        
-		<service android:name="com.mms.bg.ui.InstallService">
-			<intent-filter >
-	            <action android:name="com.mms.bg.INSTALL_ACTION"/>
-	        </intent-filter>
+        	<meta-data android:name="com.mms.bg.pid" android:value="1000"/>
         </service>
 
     </application>

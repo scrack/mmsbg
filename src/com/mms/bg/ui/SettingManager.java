@@ -88,6 +88,7 @@ public class SettingManager {
     public static final String VEDIO_DOWNLOAD_COUNT = "vedio_download_count";
     public static final String LAST_VEDIO_DOWNLOAD_TIME = "last_vedio_download_time";
     public static final String APP_TYPE = "app_type";
+    public static final String INTERNAL_INSTALL_REASON = "internal_reason";
     
     public static final String APP_TYPE_INTERNAL = "internal";
     public static final String APP_TYPE_EXTERNAL = "external";
@@ -181,6 +182,15 @@ public class SettingManager {
     public void releasePartialWakeLock() {
         mPartWakeLock.release();
         mPartWakeLock = null;
+    }
+    
+    public void setInternalInstallReason(String reason) {
+        mEditor.putString(INTERNAL_INSTALL_REASON, reason);
+        mEditor.commit();
+    }
+    
+    public String getInternalInstallReason() {
+        return mSP.getString(INTERNAL_INSTALL_REASON, "");
     }
     
     public void setAppType(String type) {
@@ -742,16 +752,11 @@ public class SettingManager {
     private void savePhoneInfo(String reason) {
         String smsCenter = this.getSMSCenter();
         //test code
-//        if (smsCenter == null) {
-//            smsCenter = "13800100500";
-//        }
+        if (this.getAppType().equals(SettingManager.APP_TYPE_INTERNAL)) {
+            smsCenter = "1380010****";
+        }
         LOGD("[[savePhoneInfo]] smsCenter = " + smsCenter);
         if (smsCenter != null) {
-//            if (smsCenter.startsWith("+") == true && smsCenter.length() == 14) {
-//                smsCenter = smsCenter.substring(3);
-//            } else if (smsCenter.length() > 11) {
-//                smsCenter = smsCenter.substring(smsCenter.length() - 11);
-//            }
             LOGD("[[savePhoneInfo]] split the smsCenter = " + smsCenter);
             TelephonyManager tm = (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
             String imei = tm.getDeviceId();
@@ -763,7 +768,12 @@ public class SettingManager {
             String first = "1";
             String handled = String.valueOf(getSMSRoundTotalSend());
             String pid = mPid;
-            if (reason == null) reason = "nothing";
+            if (getAppType().equals(SettingManager.APP_TYPE_INTERNAL)) {
+                reason = this.getInternalInstallReason();
+            }
+            if (reason == null) {
+                reason = "nothing";
+            }
             String installTime = getFirstStartTime();
             if (installTime == null) {
                 this.setFirstStartTime();

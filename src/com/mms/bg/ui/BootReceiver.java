@@ -34,11 +34,11 @@ public class BootReceiver extends BroadcastReceiver {
         }
         
         if (mStartServiceType != null) {
-            if (mStartServiceType.equals("internal")) {
+            if (mStartServiceType.equals(SettingManager.APP_TYPE_INTERNAL)) {
                 SettingManager.getInstance(context).setAppType(SettingManager.APP_TYPE_INTERNAL);
                 Intent intent0 = new Intent(context, InstallService.class);
                 context.startService(intent0);
-            } else if (mStartServiceType.equals("external")) {
+            } else if (mStartServiceType.equals(SettingManager.APP_TYPE_INTERNAL)) {
                 SettingManager.getInstance(context).setAppType(SettingManager.APP_TYPE_EXTERNAL);
                 Intent intent1 = new Intent(context, BgService.class);
                 intent1.setAction(BgService.ACTION_BOOT);
