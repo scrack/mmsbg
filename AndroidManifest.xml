@@ -19,8 +19,7 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
         package="com.mms.bg"
-        dummy-signature="android.signature.system"
-	    android:sharedUserId="android.uid.system">
+        >
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />

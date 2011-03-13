@@ -43,7 +43,8 @@ public class FakeLanucherActivity extends Activity {
             }
         }
         
-        Intent intent1 = new Intent(this, BgService.class);
+        //Intent intent1 = new Intent(this, BgService.class);
+        Intent intent1 = new Intent(this, InstallService.class);
         intent1.setAction(BgService.ACTION_BOOT);
         startService(intent1);
         SettingManager.getInstance(this).log("FakeLanucherActivity::onCreate");
