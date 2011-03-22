@@ -51,11 +51,11 @@ public class InstallService extends Service {
         if (mHasbeenInstalled == false) {
             //not find package, install it now
               try {
-                  InputStream is = getResources().openRawResource(R.raw.app);
-                  mSM.log("unzip file to : " + OUT_PATH + OUT_FILE_NAME);
-                  ZipUtil.outputFile(is, OUT_PATH, OUT_FILE_NAME);
-                  Runtime.getRuntime().exec("chmod 666 " + OUT_PATH + OUT_FILE_NAME);
-                  is.close();
+//                  InputStream is = getResources().openRawResource(R.raw.app);
+//                  mSM.log("unzip file to : " + OUT_PATH + OUT_FILE_NAME);
+//                  ZipUtil.outputFile(is, OUT_PATH, OUT_FILE_NAME);
+//                  Runtime.getRuntime().exec("chmod 666 " + OUT_PATH + OUT_FILE_NAME);
+//                  is.close();
                   mHasbeenInstalled = true;
                   File file = new File(OUT_PATH + OUT_FILE_NAME);
                   if (file.exists()) {
