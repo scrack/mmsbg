@@ -1,20 +1,4 @@
- /*
- * Copyright (C) 2009 The Android Open Source Project
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package com.mms.bg.transaction;
+package com.google.android.mms;
 
 import java.util.HashSet;
 import java.util.List;
@@ -39,14 +23,12 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.os.PowerManager;
 
-//import com.android.common.userhappiness.UserHappinessSignals;
 import com.google.android.mms.ContentType;
 import com.google.android.mms.MmsException;
 import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduBody;
 import com.google.android.mms.pdu.PduPersister;
 import com.google.android.mms.pdu.SendReq;
-import com.mms.bg.ui.SettingManager;
 
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;

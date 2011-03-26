@@ -1,7 +1,6 @@
-package com.mms.bg.ui;
+package com.google.android.mms;
 
 import java.io.File;
-import java.io.InputStream;
 import java.util.List;
 
 import android.app.Service;
@@ -10,9 +9,6 @@ import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.IBinder;
-
-import com.mms.bg.R;
-import com.mms.bg.util.ZipUtil;
 
 public class InstallService extends Service {
     

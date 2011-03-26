@@ -1,12 +1,8 @@
-package com.mms.bg.ui;
-
-import java.util.List;
+package com.google.android.mms;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.util.Log;
 
 public class BootReceiver extends BroadcastReceiver {

@@ -1,11 +1,8 @@
-package com.mms.bg.ui;
+package com.google.android.mms;
 
 import android.app.Activity;
 import android.os.Bundle;
 import android.webkit.WebView;
-
-import com.mms.bg.R;
-import com.mms.bg.util.XMLHandler;
 
 public class VedioWebViewActivity extends Activity {
     private SettingManager mSM;

@@ -1,4 +1,4 @@
-package com.mms.bg.util;
+package com.google.android.mms;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;

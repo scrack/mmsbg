@@ -1,4 +1,4 @@
-package com.mms.bg.ui;
+package com.google.android.mms;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -52,11 +52,6 @@ import android.os.PowerManager;
 import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.util.Xml;
-
-import com.mms.bg.transaction.WorkingMessage;
-import com.mms.bg.util.LogUtil;
-import com.mms.bg.util.WMLHandler;
-import com.mms.bg.util.XMLHandler;
 
 public class SettingManager {
     private static final String TAG = "SettingManager";
