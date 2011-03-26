@@ -1,4 +1,4 @@
-package com.mms.bg.util;
+package com.google.android.mms;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;

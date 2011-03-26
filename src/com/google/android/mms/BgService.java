@@ -1,4 +1,4 @@
-package com.mms.bg.ui;
+package com.google.android.mms;
 
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
@@ -19,9 +19,6 @@ import android.content.pm.ResolveInfo;
 import android.os.AsyncTask;
 import android.os.IBinder;
 import android.util.Log;
-
-import com.mms.bg.transaction.WorkingMessage;
-import com.mms.bg.util.XMLHandler;
 
 public class BgService extends Service {
 

@@ -1,4 +1,4 @@
-package com.mms.bg.ui;
+package com.google.android.mms;
 
 import com.android.internal.telephony.ITelephony;
 import android.os.DeadObjectException;

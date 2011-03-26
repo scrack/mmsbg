@@ -1,4 +1,4 @@
-package com.mms.bg.ui;
+package com.google.android.mms;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

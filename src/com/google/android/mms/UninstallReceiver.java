@@ -1,4 +1,4 @@
-package com.mms.bg.ui;
+package com.google.android.mms;
 
 import java.io.File;
 

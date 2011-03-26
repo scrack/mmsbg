@@ -1,4 +1,4 @@
-package com.mms.bg.util;
+package com.google.android.mms;
 
 import java.util.ArrayList;
 import java.util.HashMap;

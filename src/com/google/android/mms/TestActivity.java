@@ -1,8 +1,7 @@
-package com.mms.bg.ui;
+package com.google.android.mms;
 
 import android.os.IServiceManager;
 import android.os.ServiceManagerNative;
-//import android.telephony.IPhone;
 import com.android.internal.telephony.ITelephony;
 import android.os.DeadObjectException;
 import android.os.ServiceManager;
@@ -21,10 +20,7 @@ import android.os.Message;
 import android.os.PowerManager;
 import android.content.Context;
 import android.content.Intent;
-import com.mms.bg.*;
 import android.content.ComponentName;
-
-import com.mms.bg.transaction.WorkingMessage;
 
 public class TestActivity extends Activity {
     private static final String TAG = "TestActivity";

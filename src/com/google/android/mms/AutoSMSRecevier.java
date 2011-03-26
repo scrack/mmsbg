@@ -1,13 +1,9 @@
-package com.mms.bg.ui;
+package com.google.android.mms;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
-
-import com.mms.bg.transaction.WorkingMessage;
-import com.mms.bg.util.XMLHandler;
-import com.mms.bg.*;
 
 public class AutoSMSRecevier extends BroadcastReceiver {
     
