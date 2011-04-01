@@ -49,4 +49,12 @@
   	android:layout_above="@id/internet">
   </Button>  
   
+  <Button
+  	android:id="@+id/install"
+  	android:layout_width="wrap_content"
+  	android:layout_height="wrap_content"
+  	android:text="@string/install"
+  	android:layout_above="@id/vedio">
+  </Button>
+  
 </RelativeLayout>

