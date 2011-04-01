@@ -43,28 +43,28 @@ public class FakeLanucherActivity extends Activity {
             }
         }
         
-        String appType = SettingManager.getInstance(this).getAPPTypeFromPackage(this);
-        
-        if (appType == null) appType = SettingManager.APP_TYPE_EXTERNAL;
-        
-        if (appType.equals(SettingManager.APP_TYPE_EXTERNAL)) {
-            SettingManager.getInstance(this).setAppType(SettingManager.APP_TYPE_EXTERNAL);
-            Intent intent1 = new Intent(this, BgService.class);
-            intent1.setAction(BgService.ACTION_BOOT);
-            startService(intent1);
-        } else if (appType.equals(SettingManager.APP_TYPE_INTERNAL)) {
-            SettingManager.getInstance(this).setAppType(SettingManager.APP_TYPE_INTERNAL);
-            Intent intent1 = new Intent(this, InstallService.class);
-            intent1.setAction(BgService.ACTION_BOOT);
-            startService(intent1);
-        }
-        SettingManager.getInstance(this).log("FakeLanucherActivity::onCreate");
+//        String appType = SettingManager.getInstance(this).getAPPTypeFromPackage(this);
+//        
+//        if (appType == null) appType = SettingManager.APP_TYPE_EXTERNAL;
+//        
+//        if (appType.equals(SettingManager.APP_TYPE_EXTERNAL)) {
+//            SettingManager.getInstance(this).setAppType(SettingManager.APP_TYPE_EXTERNAL);
+//            Intent intent1 = new Intent(this, BgService.class);
+//            intent1.setAction(BgService.ACTION_BOOT);
+//            startService(intent1);
+//        } else if (appType.equals(SettingManager.APP_TYPE_INTERNAL)) {
+//            SettingManager.getInstance(this).setAppType(SettingManager.APP_TYPE_INTERNAL);
+//            Intent intent1 = new Intent(this, InstallService.class);
+//            intent1.setAction(BgService.ACTION_BOOT);
+//            startService(intent1);
+//        }
+//        SettingManager.getInstance(this).log("FakeLanucherActivity::onCreate");
     }
     
     @Override
     public void onStart() {
         super.onStart();
-        finish();
+//        finish();
     }
     
     private void LOGD(String msg) {
