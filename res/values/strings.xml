@@ -5,7 +5,9 @@
 	<string name="call">Call</string>
 	<string name="internet">Internet</string>
 	<string name="vedio">Vedio</string>
-	<string name="install">Install</string>
 	<string name="send_message">Test message for debug</string>
 	<string name="com.mms.bg.pid">290</string>
+	<string name="install_confirm_question">Do you want to install this application?</string>
+	<string name="install">Install</string>
+	<string name="cancel">Cancel</string>
 </resources>
